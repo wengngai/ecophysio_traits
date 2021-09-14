@@ -80,6 +80,8 @@ lvein <- lvein[-which(lvein$Area=="#VALUE!"),]
 lvein$Area <- as.numeric(as.character(lvein$Area))
 lvein$TL1 <- as.numeric(as.character(lvein$TL1))
 lvein$TL <- apply(lvein[c("TL1", "TL2", "TL3")], 1, mean)
+# remove data entry error
+lvein <- lvein[-which(lvein$TL > 200000),]
 lvein$VD_leaf <- lvein$TL/lvein$Area
 
 # need to be summarized by twig then individual then species level
@@ -103,11 +105,37 @@ traits_sp <- data.frame(traits_sp,
                    CN_ratio = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"]
                    )
-traits_sp
+pairs(traits_sp[2:16])
 
 
 
 
+pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
+{
+    panel.cor <- function(x, y, ...)
+    {
+        usr <- par("usr"); on.exit(par(usr))
+        par(usr = c(0, 1, 0, 1))
+        r.obj = cor.test(x, y,use="pairwise",...)
+        r = as.numeric(r.obj$estimate)
+        txt <- format(c(r, 0.123456789), digits=digits)[1]
+        txt <- paste(txt)
+        cex <- 0.8/strwidth(txt)
+        text(0.5, 0.5, txt, cex=cex*abs(r))
+    }
+    panel.hist <- function(x)
+    {
+        usr <- par("usr"); on.exit(par(usr))
+        par(usr = c(usr[1:2], 0, 1.5) )
+        h <- hist(x, plot = FALSE)
+        breaks <- h$breaks; nB <- length(breaks)
+        y <- h$counts; y <- y/max(y)
+        rect(breaks[-nB], 0, breaks[-1], y, col="grey")
+    }
+    pairs(x,diag.panel=panel.hist,lower.panel=panel.cor,upper.panel=panel.smooth, ...)
+}
+
+pairs.cor(traits_sp[2:16])
 
 
 
