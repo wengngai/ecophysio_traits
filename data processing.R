@@ -95,6 +95,39 @@ lvein_sp <- aggregate(x = lvein_indiv$x, by = list(Species=lvein_indiv$Species),
 names(lvein_sp)[2] <- "VD_leaf"
 
 
+
+
+
+### DEMOGRAPHIC RATE PARAMETERS ###
+AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
+S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+abbrev <- function(x){
+    y <- gsub("\\.", " ", x)
+    toupper(paste0(
+        substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
+        substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
+    ))}
+AG_parms$sp <- abbrev(rownames(AG_parms))
+S_parms$sp <- abbrev(rownames(S_parms))
+
+zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
+newlogdbh <- seq(1,50,len=200)
+plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+library(viridis)
+for(i in 1:nrow(AG_parms)){
+    lines(zeide_w_transform(a = AG_parms[i,"a"], b = AG_parms[i, "b"], c = AG_parms[i, "c"], dbh = newlogdbh) ~
+              newlogdbh, col = viridis(nrow(AG_parms))[i])
+}
+
+needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
+newdbh <- seq(0.001, 1, len=200)
+plot(rep(0.5, 200) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
+for(i in 1:nrow(S_parms)){
+    lines(needham_w_transform(K = S_parms[i,"K"], r = S_parms[i, "r1"], p = S_parms[i, "p1"], dbh = newdbh) ~
+              newdbh, col = viridis(nrow(S_parms))[i])
+}
+
+
 ### JOINING DATA ###
 traits_sp <- merge(lvein_sp, stomata_sp, by="Species")
 traits_sp <- data.frame(traits_sp,
@@ -103,7 +136,9 @@ traits_sp <- data.frame(traits_sp,
                    DH = DH_sp[match(traits_sp$Species, DH_sp$Species), "DH"],
                    vessel_area = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "Area"],
                    CN_ratio = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
-                   Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"]
+                   Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
+                   AG_parms[match(traits_sp$Species, AG_parms$sp), 1:3],
+                   S_parms[match(traits_sp$Species, S_parms$sp), 1:3]
                    )
 pairs(traits_sp[2:16])
 
@@ -135,7 +170,7 @@ pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
     pairs(x,diag.panel=panel.hist,lower.panel=panel.cor,upper.panel=panel.smooth, ...)
 }
 
-pairs.cor(traits_sp[2:16])
+pairs.cor(traits_sp[2:length(traits_sp)])
 
 
 
