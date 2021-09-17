@@ -3,6 +3,10 @@ PCA.1 <- prcomp(traits_sp[2:length(traits_sp)], scale=T)
 biplot(PCA.1)
 summary(PCA.1)
 
+library(vegan)
+rda.ssi <- rda(traits_sp[2:22] ~ traits_sp$SSI)
+anova(rda.ssi, by="margin")
+
 ### Phylogenetic Tree ###
 
 library(brranching)
