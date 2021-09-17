@@ -36,7 +36,7 @@ names(DH_sp)[2] <- "DH"
 # need to be summarized at individual then species level
 summary(vessels <- na.omit(vessels[1:11]))
 vessels$VD_twig <- vessels$total_vessels / vessels$work.area
-vessels$prop_grouped <- vessels$grouped_vessels / vessels$total_vessels
+vessels$VGI <- vessels$total_vessels / vessels$grouped_vessels
 vessels$prop_solitary <- vessels$solitary / vessels$total_vessels
 vessels$prop_cluster <- vessels$cluster / vessels$total_vessels
 vessels$prop_tangential <- vessels$tangential / vessels$total_vessels
@@ -101,6 +101,7 @@ names(lvein_sp)[2] <- "VD_leaf"
 ### DEMOGRAPHIC RATE PARAMETERS ###
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
 S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+
 abbrev <- function(x){
     y <- gsub("\\.", " ", x)
     toupper(paste0(
@@ -127,6 +128,10 @@ for(i in 1:nrow(S_parms)){
               newdbh, col = viridis(nrow(S_parms))[i])
 }
 
+### SSI ###
+SSI <- read.csv("./raw_data/SSI Jan21.csv", row.names = 1)
+SSI$sp <- abbrev(rownames(SSI))
+
 
 ### JOINING DATA ###
 traits_sp <- merge(lvein_sp, stomata_sp, by="Species")
@@ -138,13 +143,36 @@ traits_sp <- data.frame(traits_sp,
                    CN_ratio = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
                    AG_parms[match(traits_sp$Species, AG_parms$sp), 1:3],
-                   S_parms[match(traits_sp$Species, S_parms$sp), 1:3]
+                   S_parms[match(traits_sp$Species, S_parms$sp), 1:3],
+                   SSI = SSI$ssi.ba[match(traits_sp$Species,SSI$sp)]
                    )
-pairs(traits_sp[2:16])
+
+# define function first (at the end of script)
+pairs.cor(traits_sp[2:length(traits_sp)])
+
+### Transforming variables for PCA ###
+
+logit <- function(p) log( p / (1 - p) )
+logtrans <- function(x){
+    if(sum(x==0)>0){
+        offset <- min(x[which(x>0)]) / 2
+        return( log(x + offset) )
+    } else { 
+        return(log(x))
+    }
+}
+traits_sp$K <- logit(traits_sp$K)
+traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")] <-
+    apply(traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")], 2, logtrans)
+traits_sp$p1 <- logtrans(traits_sp$p1)
+
+pairs.cor(traits_sp[2:length(traits_sp)])
+
+#write.csv(traits_sp, "combined traits_sp level_Sep21.csv")
 
 
 
-
+## Defining pairs.cor() function
 pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
 {
     panel.cor <- function(x, y, ...)
@@ -169,13 +197,3 @@ pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
     }
     pairs(x,diag.panel=panel.hist,lower.panel=panel.cor,upper.panel=panel.smooth, ...)
 }
-
-pairs.cor(traits_sp[2:length(traits_sp)])
-
-
-
-
-
-
-
-
