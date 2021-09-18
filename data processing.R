@@ -61,12 +61,13 @@ lsoft$SLA[which(lsoft$SLA == "#DIV/0!" | lsoft$SLA == 0)] <- NA
 lsoft$ldmc[which(lsoft$ldmc == "#DIV/0!" | lsoft$ldmc == 0)] <- NA
 lsoft$thickness[which(lsoft$thickness == "#DIV/0!" | lsoft$thickness == 0)] <- NA
 lsoft[c("SLA", "ldmc", "thickness")] <- apply(lsoft[c("SLA", "ldmc", "thickness")], 2, as.numeric)
-aggregate(x = lsoft[c("SLA", "ldmc", "thickness")], by = list(Species = lsoft$species, Individual = lsoft$indiv),
-          FUN = mean, na.rm = T)
 
 # need to be summarized by twig then individual then species level
-
-
+lsoft_indiv <- aggregate(x = lsoft[c("SLA", "ldmc", "thickness")], by = list(Species = lsoft$species, Individual = lsoft$indiv),
+          FUN = mean, na.rm = T)
+lsoft_sp <- aggregate(x = lsoft_indiv[c("SLA", "ldmc", "thickness")], by = list(Species = lsoft_indiv$Species),
+                         FUN = mean, na.rm = T)
+names(lsoft_sp) <- c("Species", "SLA", "LDMC", "Th_L")
 
 ### STOMATA ###
 summary(stomata)
@@ -183,6 +184,7 @@ traits_sp <- merge(lvein_sp, stomata_sp, by="Species")
 traits_sp <- data.frame(traits_sp,
                    vessels_sp[match(traits_sp$Species, vessels_sp$Species), 2:8],
                    WD = WD_sp[match(traits_sp$Species, WD_sp$Species), "WD"],
+                   lsoft_sp[match(traits_sp$Species, lsoft_sp$Species), 2:4],
                    DH = DH_sp[match(traits_sp$Species, DH_sp$Species), "DH"],
                    vessel_area = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "Area"],
                    llayers_sp[match(traits_sp$Species, llayers_sp$Species), 2:7],
@@ -194,7 +196,7 @@ traits_sp <- data.frame(traits_sp,
                    )
 
 # leaf layers may need to change to proportion (divide by leaf thickness)
-traits_sp[c("Th_LC", "Th_LE", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] / traits_sp$LT
+traits_sp[c("Th_LC", "Th_LE", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <- traits_sp[c("Th_LC", "Th_LE", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] / traits_sp$Th_L
 
 # define function first (at the end of script)
 pairs.cor(traits_sp[2:length(traits_sp)])
