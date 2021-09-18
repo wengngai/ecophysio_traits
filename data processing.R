@@ -8,8 +8,7 @@ WD <- read.csv("./raw_data/wooddensity.csv", header=T, stringsAsFactors = T)
 stomata <- read.csv("./raw_data/stomata.csv", header=T, stringsAsFactors = T)
 lvein <- read.csv("./raw_data/leaf vein.csv", header=T, stringsAsFactors = T)
 llayers <- read.csv("./raw_data/leaf layers.csv", header=T, stringsAsFactors = T)
-
-### ADD SLA LDMC LT
+lsoft <- read.csv("./raw_data/leaf soft traits.csv", header=T, stringsAsFactors = T)
 
 ### CNR, HMAX ###
 # Already summarized at species mean level
@@ -54,6 +53,20 @@ vessels_sp <- aggregate(x = vessels_indiv[3:9], by = list(Species=vessels_indiv$
 summary(WD <- droplevels(na.omit(WD)))
 WD_sp <- aggregate(x = WD[,"Density"], by = list(Species=WD$Species), FUN = mean, na.rm=T)
 names(WD_sp)[2] <- "WD"
+
+### LEAF SOFT TRAITS ###
+summary(lsoft)
+lsoft$species <- toupper(lsoft$species)
+lsoft$SLA[which(lsoft$SLA == "#DIV/0!" | lsoft$SLA == 0)] <- NA
+lsoft$ldmc[which(lsoft$ldmc == "#DIV/0!" | lsoft$ldmc == 0)] <- NA
+lsoft$thickness[which(lsoft$thickness == "#DIV/0!" | lsoft$thickness == 0)] <- NA
+lsoft[c("SLA", "ldmc", "thickness")] <- apply(lsoft[c("SLA", "ldmc", "thickness")], 2, as.numeric)
+aggregate(x = lsoft[c("SLA", "ldmc", "thickness")], by = list(Species = lsoft$species, Individual = lsoft$indiv),
+          FUN = mean, na.rm = T)
+
+# need to be summarized by twig then individual then species level
+
+
 
 ### STOMATA ###
 summary(stomata)
