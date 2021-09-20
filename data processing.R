@@ -67,7 +67,7 @@ lsoft_indiv <- aggregate(x = lsoft[c("SLA", "ldmc", "thickness")], by = list(Spe
           FUN = mean, na.rm = T)
 lsoft_sp <- aggregate(x = lsoft_indiv[c("SLA", "ldmc", "thickness")], by = list(Species = lsoft_indiv$Species),
                          FUN = mean, na.rm = T)
-names(lsoft_sp) <- c("Species", "SLA", "LDMC", "Th_L")
+names(lsoft_sp) <- c("Species", "SLA", "LDMC", "Th")
 
 ### STOMATA ###
 summary(stomata)
@@ -114,6 +114,10 @@ names(lvein_sp)[2] <- "VD_leaf"
 ### LEAF LAYERS ###
 summary(llayers)
 llayers <- droplevels(llayers[-which(llayers$Data.collected.by==""),])
+llayers$LE2.2[which(llayers$LE2.2 == "#VALUE!")] <- NA
+llayers$LE2.2 <- as.numeric(as.character(llayers$LE2.2))
+llayers$UE2.2[which(llayers$UE2.2 == "#VALUE!")] <- NA
+llayers$UE2.2 <- as.numeric(as.character(llayers$UE2.2))
 
 # need to be summarized by leaf then twig then individual then species level
 # take out just the data columns first
@@ -128,6 +132,20 @@ for(i in 1:nrow(llayers.dat)){
 colnames(llayers_leaf) <- levels(by.leaf)
 llayers_leaf <- data.frame(llayers_leaf)
 
+leaf.no <- rep(1:3, 6)
+Th_123 <- cbind(
+    apply(llayers_leaf[which(leaf.no == 1)], 1, sum),
+    apply(llayers_leaf[which(leaf.no == 2)], 1, sum),
+    apply(llayers_leaf[which(leaf.no == 3)], 1, sum)
+)
+Th_all <- cbind(Th_123, Th_123, Th_123, Th_123, Th_123, Th_123)
+dim(Th_all); dim(llayers_leaf)
+llayers_leaf <- llayers_leaf / Th_all
+# outliers (data entry errors)
+llayers_leaf[which(llayers_leaf[,1] > 0.1), 1] <- NA
+llayers_leaf[which(llayers_leaf[,6] > 0.2), 6] <- NA
+llayers_leaf[which(llayers_leaf[,14] > 0.2), 14] <- NA
+
 # by twig
 llayers_leaf$twig <- substr(llayers$Leaf, 0, 8)
 llayers_twig <- melt(llayers_leaf, id.vars = "twig", measure.vars = 2:(length(llayers_leaf)-1),
@@ -141,8 +159,11 @@ llayers_twig$Species <- substr(as.character(llayers_twig$twig), 0, 3)
 llayers_indiv <- dcast(formula = Species + Individual ~ variable, 
                        value.var = "thickness", fun.aggregate = mean, na.rm = T, data = llayers_twig)
 llayers_sp <- aggregate(llayers_indiv[3:8], by = list(Species = llayers_indiv$Species), FUN = mean, na.rm = T)
+# check proportions seem corre:
+apply((llayers_sp)[2:7], 2, mean)
 # add "Th_" in front of variable names for naming
 names(llayers_sp)[2:7] <- paste0("Th_", names(llayers_sp)[2:7])
+
 
 ### DEMOGRAPHIC RATE PARAMETERS ###
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
@@ -195,14 +216,10 @@ traits_sp <- data.frame(traits_sp,
                    SSI = SSI$ssi.ba[match(traits_sp$Species,SSI$sp)]
                    )
 
-# leaf layers may need to change to proportion (divide by leaf thickness)
-traits_sp[c("Th_LC", "Th_LE", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <- traits_sp[c("Th_LC", "Th_LE", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] / traits_sp$Th_L
-
 # define function first (at the end of script)
-pairs.cor(traits_sp[2:length(traits_sp)])
-pairs.cor(llayers_sp[2:7])
-
-
+pairs.cor(traits_sp[2:11])
+pairs.cor(traits_sp[12:23])
+pairs.cor(traits_sp[24:32])
 
 ### Transforming variables for PCA ###
 
@@ -215,14 +232,14 @@ logtrans <- function(x){
         return(log(x))
     }
 }
-traits_sp$K <- logit(traits_sp$K)
-traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")] <-
-    apply(traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")], 2, logtrans)
-traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <-
-    apply(traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")], 2, logtrans)
-traits_sp$p1 <- logtrans(traits_sp$p1)
 
-pairs.cor(traits_sp[2:length(traits_sp)])
+traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")] <-
+    apply(traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")], 2, logit)
+traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <-
+    apply(traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")], 2, logit)
+traits_sp$K <- logit(traits_sp$K)
+traits_sp$p1 <- logtrans(traits_sp$p1)
+traits_sp$b <- log(traits_sp$b)
 
 #write.csv(traits_sp, "combined traits_sp level_Sep21.csv")
 
