@@ -223,7 +223,14 @@ pairs.cor(traits_sp[24:32])
 
 ### Transforming variables for PCA ###
 
-logit <- function(p) log( p / (1 - p) )
+logit <- function(p){
+    if(sum(p==0)>0){
+        q <- p+0.001
+        return(log( q / (1 - q) ))
+    } else { 
+        return(log( p / (1 - p) ))
+    }
+}
 logtrans <- function(x){
     if(sum(x==0)>0){
         offset <- min(x[which(x>0)]) / 2
@@ -240,7 +247,7 @@ traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <-
 traits_sp$K <- logit(traits_sp$K)
 traits_sp$p1 <- logtrans(traits_sp$p1)
 traits_sp$b <- log(traits_sp$b)
-
+summary(traits_sp)
 #write.csv(traits_sp, "combined traits_sp level_Sep21.csv")
 
 
