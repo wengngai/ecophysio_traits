@@ -65,10 +65,12 @@ tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$
 
 plot(tree, no.margin=TRUE)
 
+cophenetic(tree)
 
 ### Demographic params PCA ###
 PCA.demog <- rda(traits_sp[26:31], scale=T)
 summary(PCA.demog)$cont
+rownames(PCA.demog$CA$u) <- traits_sp$Species
 biplot(PCA.demog, choices=c(1,2))
 biplot(PCA.demog, choices=c(2,3))
 
@@ -87,7 +89,7 @@ biplot(PCA.traits, choices = c(2,3))
 rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3, scale = T)
 anova(rda.ssi, by="margin")
 
-### Testing all possible trait-trait correlations ###
+### Exploring all possible trait-trait correlations ###
 library(nlme)
 library(ape)
 
@@ -108,16 +110,29 @@ for(i in 1:nrow(pairwise)){
 pairwise[which(pairwise$p.value < 0.05),]
 
 
-# GLS of demog params against trait PCs
+### Investigating the effect of traits (PCs) on demographic and environmental niches
 
+# extract trait PCs
 tPC1 <- PCA.traits$CA$u[,1]
 tPC2 <- PCA.traits$CA$u[,2]
 tPC3 <- PCA.traits$CA$u[,3]
 tPC4 <- PCA.traits$CA$u[,4]
 tPC5 <- PCA.traits$CA$u[,5]
 tPC6 <- PCA.traits$CA$u[,6]
+tPC7 <- PCA.traits$CA$u[,7]
+tPC8 <- PCA.traits$CA$u[,8]
 
-summary(gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6, correlation=corBrownian(phy = tree), method="ML"))
-summary(gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6, correlation=corBrownian(phy = tree), method="ML"))
-summary(gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6, correlation=corBrownian(phy = tree), method="ML"))
+# Fit GLS models
+summary(gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+summary(gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+summary(gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+summary(gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
 
+# Plot the significant correlations
+plot(demog.PC1 ~ tPC2, type="n"); text(demog.PC1 ~ tPC2, labels=traits_sp$Species)
+plot(demog.PC1 ~ tPC4, type="n"); text(demog.PC1 ~ tPC4, labels=traits_sp$Species)
+plot(demog.PC2 ~ tPC1, type="n"); text(demog.PC2 ~ tPC1, labels=traits_sp$Species)
