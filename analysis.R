@@ -1,7 +1,7 @@
 library(vegan)
 traits_sp <- read.csv("combined traits_sp level_Sep21.csv", row.names = 1, header = T)
 summary(traits_sp)
-
+traits_sp[c("Species", "SSI")]
 
 ### Phylogenetic Tree ###
 
@@ -71,12 +71,14 @@ cophenetic(tree)
 PCA.demog <- rda(traits_sp[26:31], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
-biplot(PCA.demog, choices=c(1,2))
-biplot(PCA.demog, choices=c(2,3))
+biplot(PCA.demog, choices=c(1,2)) # PC1 = growth rate, PC2 = attenuation of growth rate in larger trees
+biplot(PCA.demog, choices=c(1,3)) # PC3 = attrition rate
 
-demog.PC1 <- PCA.demog$CA$u[,1]
+demog.PC1 <- -PCA.demog$CA$u[,1] # add minus sign so that PC1 is positively correlated with growth rate
 demog.PC2 <- PCA.demog$CA$u[,2]
 demog.PC3 <- PCA.demog$CA$u[,3]
+
+
 
 ### Traits PCA ###
 PCA.traits <- rda(traits_sp[2:25], scale = T)
@@ -123,16 +125,107 @@ tPC7 <- PCA.traits$CA$u[,7]
 tPC8 <- PCA.traits$CA$u[,8]
 
 # Fit GLS models
-summary(gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+library(MuMIn)
+
+# demog.PC1
+summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-summary(gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+(dr.dPC1 <- dredge(max.dPC1))
+summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+
+# demog.PC2
+summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-summary(gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+(dr.dPC2 <- dredge(max.dPC2))
+summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
+
+# demog.PC3
+summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-summary(gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+(dr.dPC3 <- dredge(max.dPC3))
+summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
+
+# SSI
+summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
+(dr.ssi <- dredge(max.ssi))
+summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
 
 # Plot the significant correlations
 plot(demog.PC1 ~ tPC2, type="n"); text(demog.PC1 ~ tPC2, labels=traits_sp$Species)
 plot(demog.PC1 ~ tPC4, type="n"); text(demog.PC1 ~ tPC4, labels=traits_sp$Species)
 plot(demog.PC2 ~ tPC1, type="n"); text(demog.PC2 ~ tPC1, labels=traits_sp$Species)
+plot(demog.PC3 ~ tPC1, type="n"); text(demog.PC3 ~ tPC1, labels=traits_sp$Species)
+plot(demog.PC3 ~ tPC2, type="n"); text(demog.PC3 ~ tPC2, labels=traits_sp$Species)
+plot(demog.PC3 ~ tPC3, type="n"); text(demog.PC3 ~ tPC3, labels=traits_sp$Species)
+plot(demog.PC3 ~ tPC4, type="n"); text(demog.PC3 ~ tPC4, labels=traits_sp$Species)
+plot(traits_sp$SSI ~ tPC1, type="n"); text(traits_sp$SSI ~ tPC1, labels=traits_sp$Species)
+plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
+plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_sp$Species)
+
+biplot(PCA.traits, choices = c(4,7))
+
+
+
+#################
+# VISUALIZATION #
+#################
+
+AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
+S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+
+abbrev <- function(x){
+    y <- gsub("\\.", " ", x)
+    toupper(paste0(
+        substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
+        substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
+    ))}
+AG_parms$sp <- abbrev(rownames(AG_parms))
+S_parms$sp <- abbrev(rownames(S_parms))
+
+zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
+
+# demog.PC1
+plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newlogdbh) ~ 
+          newlogdbh, col = "green")
+lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "blue")
+lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "grey")
+
+# demog.PC2
+plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Gironniera nervosa","a"], b = AG_parms["Gironniera nervosa", "b"], c = AG_parms["Gironniera nervosa", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "turquoise")
+lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newlogdbh) ~
+          newlogdbh, col = "blue")
+
+needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
+newdbh <- seq(0.001, 1, len=200)
+plot(rep(0.5, 200) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
+lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
+          newdbh, col = "brown")
+lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
+          newdbh, col = "red")
+lines(needham_w_transform(K = S_parms["Gynotroches axillaris","K"], r = S_parms["Gynotroches axillaris", "r1"], p = S_parms["Gynotroches axillaris", "p1"], dbh = newdbh) ~
+          newdbh, col = "blue")
+lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
+          newdbh, col = "turquoise")
+
+
+
+
+
+
+
+
+

@@ -197,8 +197,10 @@ for(i in 1:nrow(S_parms)){
 
 ### SSI ###
 SSI <- read.csv("./raw_data/SSI Jan21.csv", row.names = 1)
-SSI$sp <- abbrev(rownames(SSI))
-
+SSI <- data.frame(
+    SSI = SSI$ssi.ba[match(rownames(AG_parms), rownames(SSI))],
+    Species = AG_parms$sp
+)
 
 ### JOINING DATA ###
 traits_sp <- merge(lvein_sp, stomata_sp, by="Species")
@@ -213,7 +215,7 @@ traits_sp <- data.frame(traits_sp,
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
                    AG_parms[match(traits_sp$Species, AG_parms$sp), 1:3],
                    S_parms[match(traits_sp$Species, S_parms$sp), 1:3],
-                   SSI = SSI$ssi.ba[match(traits_sp$Species,SSI$sp)]
+                   SSI = SSI$SSI[match(traits_sp$Species, SSI$Species)]
                    )
 
 # define function first (at the end of script)
@@ -249,7 +251,6 @@ traits_sp$p1 <- logtrans(traits_sp$p1)
 traits_sp$b <- log(traits_sp$b)
 summary(traits_sp)
 #write.csv(traits_sp, "combined traits_sp level_Sep21.csv")
-
 
 
 ## Defining pairs.cor() function
