@@ -167,7 +167,7 @@ names(llayers_sp)[2:7] <- paste0("Th_", names(llayers_sp)[2:7])
 
 ### DEMOGRAPHIC RATE PARAMETERS ###
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
-S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+S_parms <- read.csv("./raw_data/survival model parms Sep21.csv", row.names=1)
 
 abbrev <- function(x){
     y <- gsub("\\.", " ", x)

@@ -71,10 +71,13 @@ cophenetic(tree)
 PCA.demog <- rda(traits_sp[26:31], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
-biplot(PCA.demog, choices=c(1,2)) # PC1 = growth rate, PC2 = attenuation of growth rate in larger trees
-biplot(PCA.demog, choices=c(1,3)) # PC3 = attrition rate
+biplot(PCA.demog, choices=c(1,2)) 
+# PC1 = growth rate (higher PC1 = faster growth rates)
+# PC2 = attenuation of growth rate in larger trees (higher PC2 = less attenuation)
+biplot(PCA.demog, choices=c(1,3))
+# PC3 = attrition rate (higher PC3 = higher attrition)
 
-demog.PC1 <- -PCA.demog$CA$u[,1] # add minus sign so that PC1 is positively correlated with growth rate
+demog.PC1 <- PCA.demog$CA$u[,1]
 demog.PC2 <- PCA.demog$CA$u[,2]
 demog.PC3 <- PCA.demog$CA$u[,3]
 
@@ -200,11 +203,11 @@ lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Mac
 
 # demog.PC2
 plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newlogdbh) ~
+lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newlogdbh) ~
           newlogdbh, col = "brown")
 lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newlogdbh) ~
           newlogdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Gironniera nervosa","a"], b = AG_parms["Gironniera nervosa", "b"], c = AG_parms["Gironniera nervosa", "c"], dbh = newlogdbh) ~
+lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newlogdbh) ~
           newlogdbh, col = "turquoise")
 lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newlogdbh) ~
           newlogdbh, col = "blue")
