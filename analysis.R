@@ -59,15 +59,14 @@ abbrev.tip <- function(x){
 traits_sp <- traits_sp[match(abbrev.tip(tree$tip.label), traits_sp$Species),]
 
 # EITHER OR:
-#tree$tip.label <- abbrev.tip(tree$tip.label)
+tree$tip.label <- abbrev.tip(tree$tip.label)
 #tree$tip.label <- spp_list$Species[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
-tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
+#tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 
 plot(tree, no.margin=TRUE)
 
-cophenetic(tree)
-
 ### Demographic params PCA ###
+# include Hmax as demographic param or not? it doesn't really add much
 PCA.demog <- rda(traits_sp[26:31], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
@@ -75,12 +74,12 @@ biplot(PCA.demog, choices=c(1,2))
 # PC1 = growth rate (higher PC1 = faster growth rates)
 # PC2 = attenuation of growth rate in larger trees (higher PC2 = less attenuation)
 biplot(PCA.demog, choices=c(1,3))
-# PC3 = attrition rate (higher PC3 = higher attrition)
+# PC3 = under- (neg) vs over- (pos) canopy species (growth-survival tradeoff axis)
+# Even if Hmax is included, it does NOT load on to PC3, even though many subcanopy species have negative PC3
 
 demog.PC1 <- PCA.demog$CA$u[,1]
 demog.PC2 <- PCA.demog$CA$u[,2]
 demog.PC3 <- PCA.demog$CA$u[,3]
-
 
 
 ### Traits PCA ###
@@ -88,7 +87,9 @@ PCA.traits <- rda(traits_sp[2:25], scale = T)
 summary(PCA.traits)$cont
 rownames(PCA.traits$CA$u) <- traits_sp$Species
 biplot(PCA.traits, choices = c(1,2))
-biplot(PCA.traits, choices = c(2,3))
+# PC1: acquisitive-conservative spectrum
+# PC2: sappy/juicy (neg) vs non-sappy/juicy (pos) spp.
+biplot(PCA.traits, choices = c(3, 4))
 
 # RDA of traits against SSI and demographic params
 rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3, scale = T)
@@ -98,9 +99,9 @@ anova(rda.ssi, by="margin")
 library(nlme)
 library(ape)
 
-pairwise <- data.frame(t(combn(ncol(traits_sp)-1,2)))
+traits_datonly <- traits_sp[,2:25]
+pairwise <- data.frame(t(combn(ncol(traits_datonly),2)))
 names(pairwise) <- c("y", "x")
-traits_datonly <- traits_sp[,-1]
 
 for(i in 1:nrow(pairwise)){
     y <- traits_datonly[, pairwise[i,"y"] ]
@@ -113,7 +114,6 @@ for(i in 1:nrow(pairwise)){
     pairwise$AIC[i] <- summary(mod)$AIC
 }
 pairwise[which(pairwise$p.value < 0.05),]
-
 
 ### Investigating the effect of traits (PCs) on demographic and environmental niches
 
@@ -226,9 +226,102 @@ lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["
 
 
 
+#########################
+# JSDMs with Phylo Dist #
+#########################
+
+traits_datonly <- apply(traits_datonly, 2, scale)
+
+### HMSC (can do model selection) ###
+library(Hmsc)
 
 
 
+### Boral (cannot do model selection) ###
+
+library(boral)
+
+pd_mat <- cophenetic(tree)
+
+# compare lv correlation structures
+
+null <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
+      family = "normal", calc.ics = T, 
+      mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+      lv.control = list(num.lv = 2, type = "independent", distmat = NULL)
+)
+
+phylo.exp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
+                   family = "normal", calc.ics = T,
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "exponential", distmat = pd_mat)
+)
+
+phylo.sqexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
+                   family = "normal", 
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "squared.exponential", distmat = pd_mat)
+)
+
+phylo.powexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
+                   family = "normal", 
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "powered.exponential", distmat = pd_mat)
+)
+
+phylo.spher <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
+                   family = "normal", 
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "spherical", distmat = pd_mat)
+)
 
 
+offset <- c(-0.3, -0.15, 0, 0.15, 0.3)
+library(viridis)
+cols <- viridis(5)
+colt <- adjustcolor(cols, alpha.f = 0.25)
+nt <- ncol(traits_datonly)
+
+pdf("D:/Dropbox/Functional Traits Project/Figures/HMSC coef plot Sep21.pdf", height = 9, width = 16)
+par(mfrow=c(2,2), mar=c(4,4,2,2), oma=c(1,7,1,1))
+for(i in 1:4){
+  plot(x = 1:nt, y = 1:nt, type = "n",
+       xlim = c(-4,4), xlab = "", yaxt = "n", ylab = "")
+  abline(v = 0, lty = 2)
+  for(j in 1:5){
+    if(j==1) mod <- null
+    if(j==2) mod <- phylo.exp
+    if(j==3) mod <- phylo.sqexp
+    if(j==4) mod <- phylo.powexp
+    if(j==5) mod <- phylo.spher
+    colsig <- rep(colt[j], nt)
+    sig.index <- which(mod$hpdintervals$X.coefs[,i,"lower"] > 0 | mod$hpdintervals$X.coefs[,i,"upper"] < 0)
+    colsig[sig.index] <- cols[j]
+    ##colsig <- which(sig==1)
+    points(c(1:nt) + offset[j] ~ mod$X.coefs.median[,i], pch = 16, cex = 2, col = colsig)
+    for(k in 1:nt){
+      arrows(mod$hpdintervals$X.coefs[k,i,"lower"], k + offset[j], mod$hpdintervals$X.coefs[k,i,"upper"], k + offset[j], 
+             length = 0, col = colsig[k])
+    }
+  }
+  if(i==1){
+    mtext(side=3, text = "a) Demographic PC1", cex = 1.5, adj = 0)
+    axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
+  }
+  if(i==2) mtext(side=3, text = "b) Demographic PC2", cex = 1.5, adj = 0)
+  if(i==3){
+    mtext(side=3, text = "c) Demographic PC3", cex = 1.5, adj = 0)
+    axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
+  }
+  if(i==4) mtext(side=3, text = "d) SSI", cex = 1.5, adj = 0)
+}
+legend('bottomright', bty = "n", pch = 16, col = rev(cols), pt.cex = 2, legend = rev(c(
+  "No phylogenetic structure",
+  "Exponential",
+  "Squared exponential",
+  "Powered exponential",
+  "Spherical"))
+)
+mtext(side = 2, outer = T, "Trait", line = 4, cex = 1.5)
+mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
 
