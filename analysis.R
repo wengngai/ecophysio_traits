@@ -188,33 +188,35 @@ S_parms$sp <- abbrev(rownames(S_parms))
 
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 
+newdbh <- seq(1,50,len=100)
+
 # demog.PC1
-plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newlogdbh) ~ 
-          newlogdbh, col = "green")
-lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "blue")
-lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "grey")
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
+          newdbh, col = "green")
+lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
+          newdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newdbh) ~
+          newdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
+          newdbh, col = "blue")
+lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newdbh) ~
+          newdbh, col = "grey")
 
 # demog.PC2
-plot(rep(0.5, 200) ~ newlogdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "turquoise")
-lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newlogdbh) ~
-          newlogdbh, col = "blue")
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newdbh) ~
+          newdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
+          newdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~
+          newdbh, col = "turquoise")
+lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~
+          newdbh, col = "blue")
 
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 newdbh <- seq(0.001, 1, len=200)
-plot(rep(0.5, 200) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
 lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
           newdbh, col = "brown")
 lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
@@ -324,4 +326,17 @@ legend('bottomright', bty = "n", pch = 16, col = rev(cols), pt.cex = 2, legend =
 )
 mtext(side = 2, outer = T, "Trait", line = 4, cex = 1.5)
 mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
+
+
+
+
+
+
+
+# Clustering traits?
+traits.clust <- hclust(dist(traits_datonly))
+plot(traits.clust, labels = traits_sp$Species)
+
+
+
 
