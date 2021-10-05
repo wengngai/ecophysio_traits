@@ -64,18 +64,26 @@ tree$tip.label <- abbrev.tip(tree$tip.label)
 #tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 
 #pdf("./outputs/Phylo tree.pdf", width=8, height=8)
-plot(tree, no.margin=TRUE)
+plot(tree, no.margin=TRUE, 
+     tip.color = ifelse(traits_sp$SSI > 0.66, "steelblue", ifelse(traits_sp$SSI < 0.33, "forestgreen", "grey40")))
 dev.off()
+
+
 
 ### Demographic params PCA ###
 # include Hmax as demographic param or not? it doesn't really add much
 PCA.demog <- rda(traits_sp[26:31], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
-biplot(PCA.demog, choices=c(1,2)) 
+
+#pdf("./outputs/demog PCA1-2.pdf", width=5, height=5)
+biplot(PCA.demog, choices=c(1,2), cex=3, cex.lab=1.5) 
+dev.off()
 # PC1 = growth rate (higher PC1 = faster growth rates)
 # PC2 = attenuation of growth rate in larger trees (higher PC2 = less attenuation)
+#pdf("./outputs/demog PCA1-3.pdf", width=5, height=5)
 biplot(PCA.demog, choices=c(1,3))
+dev.off()
 # PC3 = under- (neg) vs over- (pos) canopy species (growth-survival tradeoff axis)
 # Even if Hmax is included, it does NOT load on to PC3, even though many subcanopy species have negative PC3
 
@@ -88,10 +96,13 @@ demog.PC3 <- PCA.demog$CA$u[,3]
 PCA.traits <- rda(traits_sp[2:25], scale = T)
 summary(PCA.traits)$cont
 rownames(PCA.traits$CA$u) <- traits_sp$Species
+
+#pdf("./outputs/traits PCA1-2.pdf", width=5, height=5)
 biplot(PCA.traits, choices = c(1,2))
+dev.off()
 # PC1: acquisitive-conservative spectrum
-# PC2: sappy/juicy (neg) vs non-sappy/juicy (pos) spp.
-biplot(PCA.traits, choices = c(3, 4))
+# PC2: hydraulic safety versus 
+biplot(PCA.traits, choices = c(1, 4))
 
 # RDA of traits against SSI and demographic params
 rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3, scale = T)
@@ -137,6 +148,9 @@ summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tP
             correlation=corBrownian(phy = tree), method="ML"))
 (dr.dPC1 <- dredge(max.dPC1))
 summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+#pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
+biplot(PCA.traits, choices=c(2,4), display = "species") 
+dev.off()
 
 # demog.PC2
 summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
@@ -155,6 +169,12 @@ summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + t
             data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
 (dr.ssi <- dredge(max.ssi))
 summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
+
+#pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
+biplot(PCA.traits, choices=c(7,4), display = "species") 
+dev.off()
+
+
 
 # Plot the significant correlations
 plot(demog.PC1 ~ tPC2, type="n"); text(demog.PC1 ~ tPC2, labels=traits_sp$Species)
