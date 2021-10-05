@@ -63,7 +63,9 @@ tree$tip.label <- abbrev.tip(tree$tip.label)
 #tree$tip.label <- spp_list$Species[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 #tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 
+#pdf("./outputs/Phylo tree.pdf", width=8, height=8)
 plot(tree, no.margin=TRUE)
+dev.off()
 
 ### Demographic params PCA ###
 # include Hmax as demographic param or not? it doesn't really add much
