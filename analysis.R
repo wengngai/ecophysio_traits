@@ -191,63 +191,105 @@ plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_s
 biplot(PCA.traits, choices = c(4,7))
 
 
+####################
+# Trait-Swamp JSDM #
+####################
 
-#################
-# VISUALIZATION #
-#################
+# read in data
+trees <- read.csv("./raw_data/plot trees (29 spp).csv")
+plots <- read.csv("./raw_data/plot.csv")
 
-AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
-S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+# match swamp_area data
+trees$swamp_area <- plots$swamp_area[match(trees$plot, plots$plot)]/400
 
+# aggregate to tree level to prevent double counting multi-stemmed trees
+library(stringr)
+trees$UID <- toupper(trees$specimen_no.)
+trees$UID <- ifelse(str_ends(trees$UID, "[[A-Z]]"),
+                    str_sub(trees$UID, 1, -2),
+                    trees$UID)
+
+# only use 2018 data 
+trees <- trees[-which(trees$DBH_2018==""|trees$DBH_2018=="cnf"|trees$DBH_2018=="dead"|trees$DBH_2018=="missed"),]
+trees$DBH_2018 <- as.numeric(trees$DBH_2018)
+
+trees2018 <- aggregate(DBH_2018 ~ plot + swamp_area + species, 
+                        data = trees,
+                        FUN = function(x) {sqrt(sum(x^2, na.rm=T))})
+trees2018$ba <- pi*(trees2018$DBH_2018/2)^2
+
+library(reshape2)
+plottrees <- dcast(trees2018, plot + swamp_area ~ species, fun.aggregate = sum, value.var = "ba", na.rm = T)
+Y <- plottrees[, 3:length(plottrees)]
+X <- data.frame(swamp_area = plottrees$swamp_area)
+
+# reorder traits so that they match the order of Y's columns
 abbrev <- function(x){
-    y <- gsub("\\.", " ", x)
-    toupper(paste0(
-        substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
-        substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
-    ))}
-AG_parms$sp <- abbrev(rownames(AG_parms))
-S_parms$sp <- abbrev(rownames(S_parms))
+  y <- gsub("\\.", " ", x)
+  toupper(paste0(
+    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
+    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
+  ))}
+TR <- traits_datonly[match(abbrev(names(Y)), traits_sp$Species),]
+TR.PC <- PCA.traits$CA$u[match(abbrev(names(Y)), traits_sp$Species), 1:8]
 
-zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 
-newdbh <- seq(1,50,len=100)
+dim(Y); dim(X); dim(TR)
+dim(antTraits$abun); dim(antTraits$env); dim(antTraits$traits)
 
-# demog.PC1
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
-          newdbh, col = "green")
-lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
-          newdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newdbh) ~
-          newdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
-          newdbh, col = "blue")
-lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newdbh) ~
-          newdbh, col = "grey")
 
-# demog.PC2
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newdbh) ~
-          newdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
-          newdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~
-          newdbh, col = "turquoise")
-lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~
-          newdbh, col = "blue")
+library(gllvm)
+# null model without traits or env
+jsdm.null <- gllvm(y = Y, family = "tweedie", num.lv = 2)
+plot(jsdm.null)
 
-needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
-newdbh <- seq(0.001, 1, len=200)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
-lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
-          newdbh, col = "brown")
-lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
-          newdbh, col = "red")
-lines(needham_w_transform(K = S_parms["Gynotroches axillaris","K"], r = S_parms["Gynotroches axillaris", "r1"], p = S_parms["Gynotroches axillaris", "p1"], dbh = newdbh) ~
-          newdbh, col = "blue")
-lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
-          newdbh, col = "turquoise")
+# model with only env (swamp)
+jsdm.swamp <- gllvm(y = Y, X = X, 
+                   formula = ~ swamp_area,
+                   family = "tweedie", num.lv = 2)
+coefplot(jsdm.swamp)
 
+# model with traits. too many traits
+jsdm.tr <- gllvm(y = Y, X = X, TR = TR, 
+                 family = "tweedie", num.lv = 2)
+coefplot(jsdm.tr)
+
+# model with trait PCs
+jsdm.trpc <- gllvm(y = Y, X = X, TR = TR.PC, 
+                 family = "tweedie", num.lv = 2)
+coefplot(jsdm.trpc)
+
+jsdm.trpc.1.1 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,1]), 
+                   family = "tweedie", num.lv = 2)
+jsdm.trpc.1.2 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,2]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.3 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,3]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.4 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,4]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.5 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,5]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.6 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,6]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.7 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,7]), 
+                       family = "tweedie", num.lv = 2)
+jsdm.trpc.1.8 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,8]), 
+                       family = "tweedie", num.lv = 2)
+which.min(
+  AICc.gllvm(jsdm.null,
+             jsdm.swamp,
+             jsdm.tr,
+             jsdm.trpc,
+             jsdm.trpc.1.1,
+             jsdm.trpc.1.2,
+             jsdm.trpc.1.3,
+             jsdm.trpc.1.4,
+             jsdm.trpc.1.5,
+             jsdm.trpc.1.6,
+             jsdm.trpc.1.7,
+             jsdm.trpc.1.8
+             ))
+AIC(jsdm.null, jsdm.trpc)
 
 
 #########################
@@ -359,6 +401,63 @@ mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
 traits.clust <- hclust(dist(traits_datonly))
 plot(traits.clust, labels = traits_sp$Species)
 
+
+
+#################
+# VISUALIZATION #
+#################
+
+AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
+S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
+
+abbrev <- function(x){
+  y <- gsub("\\.", " ", x)
+  toupper(paste0(
+    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
+    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
+  ))}
+AG_parms$sp <- abbrev(rownames(AG_parms))
+S_parms$sp <- abbrev(rownames(S_parms))
+
+zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
+
+newdbh <- seq(1,50,len=100)
+
+# demog.PC1
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
+        newdbh, col = "green")
+lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
+        newdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newdbh) ~
+        newdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
+        newdbh, col = "blue")
+lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newdbh) ~
+        newdbh, col = "grey")
+
+# demog.PC2
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
+lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newdbh) ~
+        newdbh, col = "brown")
+lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
+        newdbh, col = "red")
+lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~
+        newdbh, col = "turquoise")
+lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~
+        newdbh, col = "blue")
+
+needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
+newdbh <- seq(0.001, 1, len=200)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
+lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
+        newdbh, col = "brown")
+lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
+        newdbh, col = "red")
+lines(needham_w_transform(K = S_parms["Gynotroches axillaris","K"], r = S_parms["Gynotroches axillaris", "r1"], p = S_parms["Gynotroches axillaris", "p1"], dbh = newdbh) ~
+        newdbh, col = "blue")
+lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
+        newdbh, col = "turquoise")
 
 
 
