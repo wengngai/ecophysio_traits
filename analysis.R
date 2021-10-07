@@ -191,6 +191,13 @@ plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_s
 biplot(PCA.traits, choices = c(4,7))
 
 
+# are demog.PCs and SSI correlated?
+summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3,
+                       data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
+dr.ssi.demo <- dredge(ssi.mod)
+summary(get.models(dr.ssi.demo, subset=1)[[1]])
+
+
 ####################
 # Trait-Swamp JSDM #
 ####################
