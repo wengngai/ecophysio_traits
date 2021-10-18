@@ -113,12 +113,13 @@ library(nlme)
 library(ape)
 
 traits_datonly <- traits_sp[,2:25]
-pairwise <- data.frame(t(combn(ncol(traits_datonly),2)))
+traits_datonly_scaled <- apply(traits_datonly, 2, scale)
+pairwise <- data.frame(t(combn(ncol(traits_datonly_scaled),2)))
 names(pairwise) <- c("y", "x")
 
 for(i in 1:nrow(pairwise)){
-    y <- traits_datonly[, pairwise[i,"y"] ]
-    x <- traits_datonly[, pairwise[i,"x"] ]
+    y <- traits_datonly_scaled[, pairwise[i,"y"] ]
+    x <- traits_datonly_scaled[, pairwise[i,"x"] ]
     mod <- gls(y ~ x, correlation=corBrownian(phy = tree), method="ML")
     pairwise$y.name[i] <- names(traits_datonly)[ pairwise[i,"y"] ]
     pairwise$x.name[i] <- names(traits_datonly)[ pairwise[i,"x"] ]
@@ -127,6 +128,55 @@ for(i in 1:nrow(pairwise)){
     pairwise$AIC[i] <- summary(mod)$AIC
 }
 pairwise[which(pairwise$p.value < 0.05),]
+
+library(spaa)
+# have to convert to pairwise to a dist object
+sig.pairs <- pairwise[which(pairwise$p.value < 0.05),]
+pairwise.dist <- list2dist(data.frame(x = c(sig.pairs$x.name, sig.pairs$y.name),
+                     y = c(sig.pairs$y.name, sig.pairs$x.name),
+                     coef = c(sig.pairs$coef, sig.pairs$coef)
+))
+pairwise.dist[is.na(pairwise.dist)] <- 0
+
+# qgraph plots
+library(qgraph)
+#attr(pairwise.dist, "Labels")
+traitgroups <- list(
+  leaf=c(1,3,5,11:19),
+  vessels=c(2,6:10,20:23),
+  wood=c(24,4)
+)
+
+Q <- qgraph(pairwise.dist, groups = traitgroups, 
+       minimum = 0, vsize = 5, 
+       legend = T, borders = F, details = T)
+
+library(circlize)
+chordDiagram(pairwise[c("x.name","y.name","coef")], symmetric = T)
+
+ordered.traitnames <- c(
+  "SLA", "LDMC", "Th", "CN_ratio",
+  "Th_LC", "Th_LE", "Th_SM", "Th_PM", "Th_UE", "Th_UC",
+  "GCL", "SD", "VD_leaf",
+  "vessel_area", "VD_twig", "prop_radial", "prop_cluster", "prop_solitary", "prop_occluded", "prop_tangential", "VGI", "DH",
+  "WD", "Hmax"
+)
+groupnames <- c(rep("leaf_soft", 4), rep("leaf_layer", 6), rep("leaf_hyd", 3), rep("twig_hyd", 9), rep("wood", 2))
+library(viridis)
+grid.col <- viridis(5)[as.numeric(as.factor(groupnames))]
+names(groupnames) <- ordered.traitnames
+names(grid.col) <- ordered.traitnames
+
+sig.pairs <- pairwise[c("x.name","y.name","coef")]
+sig.pairs$coef[which(pairwise$p.value > 0.05)] <- 0
+links.col <- ifelse(sig.pairs$coef>0, "turquoise", ifelse(sig.pairs$coef==0, "white", "pink"))
+
+chordDiagram(sig.pairs, symmetric = T, 
+             order = ordered.traitnames, group = groupnames,
+             grid.col = grid.col, col = links.col, transparency = 0.75
+)
+circos.clear()
+
 
 ### Investigating the effect of traits (PCs) on demographic and environmental niches
 
