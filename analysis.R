@@ -1,6 +1,7 @@
 library(vegan)
 traits_sp <- read.csv("combined traits_sp level_Sep21.csv", row.names = 1, header = T)
 summary(traits_sp)
+
 traits_sp[c("Species", "SSI")]
 
 ### Phylogenetic Tree ###
@@ -139,42 +140,51 @@ pairwise.dist <- list2dist(data.frame(x = c(sig.pairs$x.name, sig.pairs$y.name),
 pairwise.dist[is.na(pairwise.dist)] <- 0
 
 # qgraph plots
-library(qgraph)
+#library(qgraph)
 #attr(pairwise.dist, "Labels")
-traitgroups <- list(
-  leaf=c(1,3,5,11:19),
-  vessels=c(2,6:10,20:23),
-  wood=c(24,4)
-)
-
-Q <- qgraph(pairwise.dist, groups = traitgroups, 
-       minimum = 0, vsize = 5, 
-       legend = T, borders = F, details = T)
+#traitgroups <- list(
+#  leaf=c(1,3,5,11:19),
+#  vessels=c(2,6:10,20:23),
+#  wood=c(24,4)
+#)
+#
+#Q <- qgraph(pairwise.dist, groups = traitgroups, 
+#       minimum = 0, vsize = 5, 
+#       legend = T, borders = F, details = T)
 
 library(circlize)
-chordDiagram(pairwise[c("x.name","y.name","coef")], symmetric = T)
 
 ordered.traitnames <- c(
-  "SLA", "LDMC", "Th", "CN_ratio",
+  "SLA", "LDMC", "Th", "CNR",
   "Th_LC", "Th_LE", "Th_SM", "Th_PM", "Th_UE", "Th_UC",
-  "GCL", "SD", "VD_leaf",
-  "vessel_area", "VD_twig", "prop_radial", "prop_cluster", "prop_solitary", "prop_occluded", "prop_tangential", "VGI", "DH",
+  "GCL", "SD", "L_VD",
+  "VA", "T_VD", "RV", "CV", "SV", "OV", "TV", "VGI", "DH",
   "WD", "Hmax"
 )
-groupnames <- c(rep("leaf_soft", 4), rep("leaf_layer", 6), rep("leaf_hyd", 3), rep("twig_hyd", 9), rep("wood", 2))
-library(viridis)
-grid.col <- viridis(5)[as.numeric(as.factor(groupnames))]
+groupnames <- c(rep("leaf", 13), rep("wood", 11))
+grid.col <- ifelse(groupnames=="leaf", "#DBD56E", "#403D58")
 names(groupnames) <- ordered.traitnames
 names(grid.col) <- ordered.traitnames
 
 sig.pairs <- pairwise[c("x.name","y.name","coef")]
 sig.pairs$coef[which(pairwise$p.value > 0.05)] <- 0
-links.col <- ifelse(sig.pairs$coef>0, "turquoise", ifelse(sig.pairs$coef==0, "white", "pink"))
+links.col <- ifelse(sig.pairs$coef>0, "#66D7D1", ifelse(sig.pairs$coef==0, "#F2EFEA", "#FC7753"))
+alpha.sig <- (0.05 - pairwise$p.value)/0.1
+alpha.sig[which(alpha.sig < 0)] <- 0
+for(i in 1:length(links.col)) links.col[i] <- adjustcolor(links.col[i], alpha.f = alpha.sig[i])
 
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait correlations chord.pdf", height=6, width=10)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait correlations chord.jpg", height=6, width=10, units="in", res=300)
 chordDiagram(sig.pairs, symmetric = T, 
-             order = ordered.traitnames, group = groupnames,
+             order = ordered.traitnames, group = groupnames, annotationTrack = c("name", "grid"), 
+             annotationTrackHeight = mm_h(c(3, 3)),
              grid.col = grid.col, col = links.col, transparency = 0.75
 )
+legend(x= 1.1, y = -0.5, title = "Correlation", bty = "n",
+       legend=c("Positive", "Negative"), fill = adjustcolor(c("#66D7D1", "#FC7753"), alpha.f = 0.25))
+legend(x= 1.1, y = -0.2, title = "Organ", bty = "n",
+       legend=c("Leaf", "Wood"), fill = c("#DBD56E", "#403D58"))
+dev.off()
 circos.clear()
 
 
@@ -248,218 +258,6 @@ dr.ssi.demo <- dredge(ssi.mod)
 summary(get.models(dr.ssi.demo, subset=1)[[1]])
 
 
-####################
-# Trait-Swamp JSDM #
-####################
-
-# read in data
-trees <- read.csv("./raw_data/plot trees (29 spp).csv")
-plots <- read.csv("./raw_data/plot.csv")
-
-# match swamp_area data
-trees$swamp_area <- plots$swamp_area[match(trees$plot, plots$plot)]/400
-
-# aggregate to tree level to prevent double counting multi-stemmed trees
-library(stringr)
-trees$UID <- toupper(trees$specimen_no.)
-trees$UID <- ifelse(str_ends(trees$UID, "[[A-Z]]"),
-                    str_sub(trees$UID, 1, -2),
-                    trees$UID)
-
-# only use 2018 data 
-trees <- trees[-which(trees$DBH_2018==""|trees$DBH_2018=="cnf"|trees$DBH_2018=="dead"|trees$DBH_2018=="missed"),]
-trees$DBH_2018 <- as.numeric(trees$DBH_2018)
-
-trees2018 <- aggregate(DBH_2018 ~ plot + swamp_area + species, 
-                        data = trees,
-                        FUN = function(x) {sqrt(sum(x^2, na.rm=T))})
-trees2018$ba <- pi*(trees2018$DBH_2018/2)^2
-
-library(reshape2)
-plottrees <- dcast(trees2018, plot + swamp_area ~ species, fun.aggregate = sum, value.var = "ba", na.rm = T)
-Y <- plottrees[, 3:length(plottrees)]
-X <- data.frame(swamp_area = plottrees$swamp_area)
-
-# reorder traits so that they match the order of Y's columns
-abbrev <- function(x){
-  y <- gsub("\\.", " ", x)
-  toupper(paste0(
-    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
-    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
-  ))}
-TR <- traits_datonly[match(abbrev(names(Y)), traits_sp$Species),]
-TR.PC <- PCA.traits$CA$u[match(abbrev(names(Y)), traits_sp$Species), 1:8]
-
-
-dim(Y); dim(X); dim(TR)
-dim(antTraits$abun); dim(antTraits$env); dim(antTraits$traits)
-
-
-library(gllvm)
-# null model without traits or env
-jsdm.null <- gllvm(y = Y, family = "tweedie", num.lv = 2)
-plot(jsdm.null)
-
-# model with only env (swamp)
-jsdm.swamp <- gllvm(y = Y, X = X, 
-                   formula = ~ swamp_area,
-                   family = "tweedie", num.lv = 2)
-coefplot(jsdm.swamp)
-
-# model with traits. too many traits
-jsdm.tr <- gllvm(y = Y, X = X, TR = TR, 
-                 family = "tweedie", num.lv = 2)
-coefplot(jsdm.tr)
-
-# model with trait PCs
-jsdm.trpc <- gllvm(y = Y, X = X, TR = TR.PC, 
-                 family = "tweedie", num.lv = 2)
-coefplot(jsdm.trpc)
-
-jsdm.trpc.1.1 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,1]), 
-                   family = "tweedie", num.lv = 2)
-jsdm.trpc.1.2 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,2]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.3 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,3]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.4 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,4]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.5 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,5]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.6 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,6]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.7 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,7]), 
-                       family = "tweedie", num.lv = 2)
-jsdm.trpc.1.8 <- gllvm(y = Y, X = X, TR = data.frame(TR.PC[,8]), 
-                       family = "tweedie", num.lv = 2)
-which.min(
-  AICc.gllvm(jsdm.null,
-             jsdm.swamp,
-             jsdm.tr,
-             jsdm.trpc,
-             jsdm.trpc.1.1,
-             jsdm.trpc.1.2,
-             jsdm.trpc.1.3,
-             jsdm.trpc.1.4,
-             jsdm.trpc.1.5,
-             jsdm.trpc.1.6,
-             jsdm.trpc.1.7,
-             jsdm.trpc.1.8
-             ))
-AIC(jsdm.null, jsdm.trpc)
-
-
-#########################
-# JSDMs with Phylo Dist #
-#########################
-
-traits_datonly <- apply(traits_datonly, 2, scale)
-
-### HMSC (can do model selection) ###
-library(Hmsc)
-
-
-
-### Boral (cannot do model selection) ###
-
-library(boral)
-
-pd_mat <- cophenetic(tree)
-
-# compare lv correlation structures
-
-null <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-      family = "normal", calc.ics = T, 
-      mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-      lv.control = list(num.lv = 2, type = "independent", distmat = NULL)
-)
-
-phylo.exp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                   family = "normal", calc.ics = T,
-                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                   lv.control = list(num.lv = 2, type = "exponential", distmat = pd_mat)
-)
-
-phylo.sqexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                   family = "normal", 
-                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                   lv.control = list(num.lv = 2, type = "squared.exponential", distmat = pd_mat)
-)
-
-phylo.powexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                   family = "normal", 
-                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                   lv.control = list(num.lv = 2, type = "powered.exponential", distmat = pd_mat)
-)
-
-phylo.spher <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                   family = "normal", 
-                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                   lv.control = list(num.lv = 2, type = "spherical", distmat = pd_mat)
-)
-
-
-offset <- c(-0.3, -0.15, 0, 0.15, 0.3)
-library(viridis)
-cols <- viridis(5)
-colt <- adjustcolor(cols, alpha.f = 0.25)
-nt <- ncol(traits_datonly)
-
-pdf("D:/Dropbox/Functional Traits Project/Figures/HMSC coef plot Sep21.pdf", height = 9, width = 16)
-par(mfrow=c(2,2), mar=c(4,4,2,2), oma=c(1,7,1,1))
-for(i in 1:4){
-  plot(x = 1:nt, y = 1:nt, type = "n",
-       xlim = c(-4,4), xlab = "", yaxt = "n", ylab = "")
-  abline(v = 0, lty = 2)
-  for(j in 1:5){
-    if(j==1) mod <- null
-    if(j==2) mod <- phylo.exp
-    if(j==3) mod <- phylo.sqexp
-    if(j==4) mod <- phylo.powexp
-    if(j==5) mod <- phylo.spher
-    colsig <- rep(colt[j], nt)
-    sig.index <- which(mod$hpdintervals$X.coefs[,i,"lower"] > 0 | mod$hpdintervals$X.coefs[,i,"upper"] < 0)
-    colsig[sig.index] <- cols[j]
-    ##colsig <- which(sig==1)
-    points(c(1:nt) + offset[j] ~ mod$X.coefs.median[,i], pch = 16, cex = 2, col = colsig)
-    for(k in 1:nt){
-      arrows(mod$hpdintervals$X.coefs[k,i,"lower"], k + offset[j], mod$hpdintervals$X.coefs[k,i,"upper"], k + offset[j], 
-             length = 0, col = colsig[k])
-    }
-  }
-  if(i==1){
-    mtext(side=3, text = "a) Demographic PC1", cex = 1.5, adj = 0)
-    axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
-  }
-  if(i==2) mtext(side=3, text = "b) Demographic PC2", cex = 1.5, adj = 0)
-  if(i==3){
-    mtext(side=3, text = "c) Demographic PC3", cex = 1.5, adj = 0)
-    axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
-  }
-  if(i==4) mtext(side=3, text = "d) SSI", cex = 1.5, adj = 0)
-}
-legend('bottomright', bty = "n", pch = 16, col = rev(cols), pt.cex = 2, legend = rev(c(
-  "No phylogenetic structure",
-  "Exponential",
-  "Squared exponential",
-  "Powered exponential",
-  "Spherical"))
-)
-mtext(side = 2, outer = T, "Trait", line = 4, cex = 1.5)
-mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
-
-
-
-
-
-
-
-# Clustering traits?
-traits.clust <- hclust(dist(traits_datonly))
-plot(traits.clust, labels = traits_sp$Species)
-
-
-
 #################
 # VISUALIZATION #
 #################
@@ -477,44 +275,87 @@ AG_parms$sp <- abbrev(rownames(AG_parms))
 S_parms$sp <- abbrev(rownames(S_parms))
 
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
-
-newdbh <- seq(1,50,len=100)
-
-# demog.PC1
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
-        newdbh, col = "green")
-lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
-        newdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Campnosperma squamatum","a"], b = AG_parms["Campnosperma squamatum", "b"], c = AG_parms["Campnosperma squamatum", "c"], dbh = newdbh) ~
-        newdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
-        newdbh, col = "blue")
-lines(zeide_w_transform(a = AG_parms["Macaranga bancana","a"], b = AG_parms["Macaranga bancana", "b"], c = AG_parms["Macaranga bancana", "c"], dbh = newdbh) ~
-        newdbh, col = "grey")
-
-# demog.PC2
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,1), xlab="DBH (log-transformed)", ylab="AGR", type="n")
-lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newdbh) ~
-        newdbh, col = "brown")
-lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
-        newdbh, col = "red")
-lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~
-        newdbh, col = "turquoise")
-lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~
-        newdbh, col = "blue")
-
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
-newdbh <- seq(0.001, 1, len=200)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n")
-lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
-        newdbh, col = "brown")
+
+### PCA plot
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.pdf", height=6, width=8)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.jpg", height=6, width=8, units="in", res=300)
+layout(matrix(c(1,1,2,1,1,3,4,5,6), ncol = 3))
+par(mar = c(5,5.5,2,2))
+plot(demog.PC2 ~ demog.PC1, type = "n", ylim = c(-0.45,0.45), xlim = c(-0.6, 0.4),
+     ylab = "PC2 (20.5% vriance explained)", xlab = "PC1 (43.8% variance explained)", cex.lab = 1.5)
+for(i in 1:6){
+  if(i<=3) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
+  arrows(0, 0, PCA.demog$CA$v[i,1]/2, PCA.demog$CA$v[i,2]/2, lwd = 2, col = arrowcol)
+  text(x = PCA.demog$CA$v[i,1]/1.8, y = PCA.demog$CA$v[i,2]/1.8, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.demog$CA$v)[i], cex = 1.2 )
+}
+text(demog.PC2 ~ demog.PC1, labels = traits_sp$Species,
+     col = ifelse(traits_sp$Species %in% c("LMU","GPA"), "#F7B39F", 
+                  ifelse(traits_sp$Species %in% c("PEC","EMA"), "#66D7D1",
+                         ifelse(traits_sp$Species %in% c("PPO", "GNE"), "#FC7753",
+                                ifelse(traits_sp$Species %in% c("RCI", "AAN"), "#538A95", "grey")))),
+     cex = ifelse(traits_sp$Species %in% c("LMU", "GPA", "PEC", "EMA", "PPO", "GNE", "RCI", "AAN"), 1, 0.7)
+     )
+legend("bottomleft", bty = "n", lwd = 2, col=c("#403D58","#8E8963"),
+       legend = c("Growth model parameters: a, b, c (panels b & d)", "Survival model parameters: K, r1, p1 (panels c & e)"))
+mtext(side = 3, line = -1.2, text = " a)", adj = 0)
+
+## Demog PC1
+# Growth
+newdbh <- seq(1,50,len=100)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
+lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
+        newdbh, col = "#538A95", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
+        newdbh, col = "#FC7753", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Gironniera nervosa","a"], b = AG_parms["Gironniera nervosa", "b"], c = AG_parms["Gironniera nervosa", "c"], dbh = newdbh) ~
+        newdbh, col = "#FC7753", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
+        newdbh, col = "#538A95", lwd = 2)
+#text(x = rep(20,4), y = c(0.65, 0.48, 0.26, 0.17), labels = c("PPO", "GNE", "AAN", "RCI"), col=c("#FC7753", "#FC7753", "#538A95", "#538A95"))
+mtext(side = 3, line = -1.2, text = " b)", adj = 0)
+
+# Survival
+newdbh <- seq(0.001, 0.5, len=200)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n", cex.lab = 1.5)
+lines(needham_w_transform(K = S_parms["Gironniera nervosa","K"], r = S_parms["Gironniera nervosa", "r1"], p = S_parms["Gironniera nervosa", "p1"], dbh = newdbh) ~
+        newdbh, col = "#FC7753", lwd = 2)
 lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
-        newdbh, col = "red")
-lines(needham_w_transform(K = S_parms["Gynotroches axillaris","K"], r = S_parms["Gynotroches axillaris", "r1"], p = S_parms["Gynotroches axillaris", "p1"], dbh = newdbh) ~
-        newdbh, col = "blue")
-lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
-        newdbh, col = "turquoise")
+        newdbh, col = "#FC7753", lwd = 2)
+lines(needham_w_transform(K = S_parms["Alstonia angustifolia","K"], r = S_parms["Alstonia angustifolia", "r1"], p = S_parms["Alstonia angustifolia", "p1"], dbh = newdbh) ~
+        newdbh, col = "#538A95", lwd = 2)
+lines(needham_w_transform(K = S_parms["Rhodamnia cinerea","K"], r = S_parms["Rhodamnia cinerea", "r1"], p = S_parms["Rhodamnia cinerea", "p1"], dbh = newdbh) ~
+        newdbh, col = "#538A95", lwd = 2)
+legend('bottomright', bty = "n", legend = c("Low PC1: AAN, RCI", "High PC1: GNE, PPO"), col = c("#538A95", "#FC7753"), lwd = 2)
+mtext(side = 3, line = -1.2, text = " c)", adj = 0)
 
+## Demog PC2
+# Growth
+newdbh <- seq(1,50,len=100)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.45), xlab="DBH (cm)", ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
+lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~ 
+        newdbh, col = "#F7B39F", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Elaeocarpus mastersii","a"], b = AG_parms["Elaeocarpus mastersii", "b"], c = AG_parms["Elaeocarpus mastersii", "c"], dbh = newdbh) ~
+        newdbh, col = "#66D7D1", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~ 
+        newdbh, col = "#F7B39F", lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
+        newdbh, col = "#66D7D1", lwd = 2)
+mtext(side = 3, line = -1.2, text = " d)", adj = 0)
 
+# Survival
+newdbh <- seq(0.001, 0.5, len=200)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n", cex.lab = 1.5)
+lines(needham_w_transform(K = S_parms["Lophopetalum multinervium","K"], r = S_parms["Lophopetalum multinervium", "r1"], p = S_parms["Lophopetalum multinervium", "p1"], dbh = newdbh) ~
+        newdbh, col = "#F7B39F", lwd = 2)
+lines(needham_w_transform(K = S_parms["Elaeocarpus mastersii","K"], r = S_parms["Elaeocarpus mastersii", "r1"], p = S_parms["Elaeocarpus mastersii", "p1"], dbh = newdbh) ~
+        newdbh, col = "#66D7D1", lwd = 2)
+lines(needham_w_transform(K = S_parms["Garcinia parvifolia","K"], r = S_parms["Garcinia parvifolia", "r1"], p = S_parms["Garcinia parvifolia", "p1"], dbh = newdbh) ~
+        newdbh, col = "#F7B39F", lwd = 2)
+lines(needham_w_transform(K = S_parms["Pternandra echinata","K"], r = S_parms["Pternandra echinata", "r1"], p = S_parms["Pternandra echinata", "p1"], dbh = newdbh) ~
+        newdbh, col = "#66D7D1", lwd = 2)
+mtext(side = 3, line = -1.2, text = " e)", adj = 0)
+legend('bottomright', bty = "n", legend = c("Low PC2: EMA, PEC", "High PC2: GPA, LMU"), col = c("#66D7D1", "#F7B39F"), lwd = 2)
 
+dev.off()

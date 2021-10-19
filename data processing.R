@@ -37,13 +37,13 @@ names(DH_sp)[2] <- "DH"
 ### VESSEL COUNTS ###
 # need to be summarized at individual then species level
 summary(vessels <- na.omit(vessels[1:11]))
-vessels$VD_twig <- vessels$total_vessels / vessels$work.area
+vessels$T_VD <- vessels$total_vessels / vessels$work.area
 vessels$VGI <- vessels$total_vessels / vessels$grouped_vessels
-vessels$prop_solitary <- vessels$solitary / vessels$total_vessels
-vessels$prop_cluster <- vessels$cluster / vessels$total_vessels
-vessels$prop_tangential <- vessels$tangential / vessels$total_vessels
-vessels$prop_radial <- vessels$radial / vessels$total_vessels
-vessels$prop_occluded <- vessels$occluded / vessels$total_vessels
+vessels$SV <- vessels$solitary / vessels$total_vessels
+vessels$CV <- vessels$cluster / vessels$total_vessels
+vessels$TV <- vessels$tangential / vessels$total_vessels
+vessels$RV <- vessels$radial / vessels$total_vessels
+vessels$OV <- vessels$occluded / vessels$total_vessels
 
 vessels_indiv <- aggregate(x = vessels[12:18], by = list(Species=vessels$Species, Individual=vessels$Individual), FUN = mean, na.rm=T)
 vessels_sp <- aggregate(x = vessels_indiv[3:9], by = list(Species=vessels_indiv$Species), FUN = mean, na.rm=T)
@@ -99,17 +99,17 @@ lvein$TL1 <- as.numeric(as.character(lvein$TL1))
 lvein$TL <- apply(lvein[c("TL1", "TL2", "TL3")], 1, mean)
 # remove data entry error
 lvein <- lvein[-which(lvein$TL > 200000),]
-lvein$VD_leaf <- lvein$TL/lvein$Area
+lvein$L_VD <- lvein$TL/lvein$Area
 
 # need to be summarized by twig then individual then species level
 lvein$Twig <- substr(lvein$Leaf, 0, 8)
 lvein$Individual <- substr(lvein$Leaf, 0, 5)
 lvein$Species <- substr(lvein$Leaf, 0, 3)
 
-lvein_twig <- aggregate(x = lvein$VD_leaf, by = list(Species=lvein$Species, Individual=lvein$Individual, Twig=lvein$Twig), FUN = mean, na.rm=T)
+lvein_twig <- aggregate(x = lvein$L_VD, by = list(Species=lvein$Species, Individual=lvein$Individual, Twig=lvein$Twig), FUN = mean, na.rm=T)
 lvein_indiv <- aggregate(x = lvein_twig$x, by = list(Species=lvein_twig$Species, Individual=lvein_twig$Individual), FUN = mean, na.rm=T)
 lvein_sp <- aggregate(x = lvein_indiv$x, by = list(Species=lvein_indiv$Species), FUN = mean, na.rm=T)
-names(lvein_sp)[2] <- "VD_leaf"
+names(lvein_sp)[2] <- "L_VD"
 
 ### LEAF LAYERS ###
 summary(llayers)
@@ -209,9 +209,9 @@ traits_sp <- data.frame(traits_sp,
                    WD = WD_sp[match(traits_sp$Species, WD_sp$Species), "WD"],
                    lsoft_sp[match(traits_sp$Species, lsoft_sp$Species), 2:4],
                    DH = DH_sp[match(traits_sp$Species, DH_sp$Species), "DH"],
-                   vessel_area = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "Area"],
+                   VA = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "Area"],
                    llayers_sp[match(traits_sp$Species, llayers_sp$Species), 2:7],
-                   CN_ratio = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
+                   CNR = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
                    AG_parms[match(traits_sp$Species, AG_parms$sp), 1:3],
                    S_parms[match(traits_sp$Species, S_parms$sp), 1:3],
@@ -242,8 +242,8 @@ logtrans <- function(x){
     }
 }
 
-traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")] <-
-    apply(traits_sp[c("prop_solitary", "prop_cluster", "prop_tangential", "prop_radial", "prop_occluded")], 2, logit)
+traits_sp[c("SV", "CV", "TV", "RV", "OV")] <-
+    apply(traits_sp[c("SV", "CV", "TV", "RV", "OV")], 2, logit)
 traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <-
     apply(traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")], 2, logit)
 traits_sp$K <- logit(traits_sp$K)
