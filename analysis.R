@@ -2,9 +2,23 @@ library(vegan)
 traits_sp <- read.csv("combined traits_sp level_Sep21.csv", row.names = 1, header = T)
 summary(traits_sp)
 
-traits_sp[c("Species", "SSI")]
+recruitment <- read.csv("./raw_data/5cm recruitment (29 spp).csv")
 
-### Phylogenetic Tree ###
+abbrev <- function(x){
+  y <- gsub("\\.", " ", x)
+  toupper(paste0(
+    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
+    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
+  ))}
+
+#hist(sqrt(recruitment$recruitment), breaks=15)
+recruitment$recruitment <- sqrt(recruitment$recruitment)
+traits_sp$rec <- recruitment$recruitment[match(traits_sp$Species, abbrev(recruitment$species))]
+
+
+#####################
+# PHYLOGENETIC TREE #
+#####################
 
 library(brranching)
 
@@ -70,48 +84,134 @@ plot(tree, no.margin=TRUE,
 dev.off()
 
 
+#######################
+# DIMENSION REDUCTION #
+#        (PCAs)       #
+#######################
 
-### Demographic params PCA ###
-# include Hmax as demographic param or not? it doesn't really add much
-PCA.demog <- rda(traits_sp[26:31], scale=T)
+### Demographic params ###
+names(traits_sp)
+PCA.demog <- rda(traits_sp[c(26:31,33)], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
 
 #pdf("./outputs/demog PCA1-2.pdf", width=5, height=5)
 biplot(PCA.demog, choices=c(1,2), cex=3, cex.lab=1.5) 
 dev.off()
-# PC1 = growth rate (higher PC1 = faster growth rates)
-# PC2 = attenuation of growth rate in larger trees (higher PC2 = less attenuation)
+# PC1 = growth rate (lower PC1 = faster growth rates) 
+# PC2 = growth-survival tradeoff
 #pdf("./outputs/demog PCA1-3.pdf", width=5, height=5)
-biplot(PCA.demog, choices=c(1,3))
+biplot(PCA.demog, choices=c(3,4))
 dev.off()
-# PC3 = under- (neg) vs over- (pos) canopy species (growth-survival tradeoff axis)
+# PC3 = attenuation of growth rate in larger trees (higher PC3 = more attenuation)
+# PC4 = ??
 # Even if Hmax is included, it does NOT load on to PC3, even though many subcanopy species have negative PC3
 
-demog.PC1 <- PCA.demog$CA$u[,1]
+demog.PC1 <- PCA.demog$CA$u[,1] * -1 # reversed so that higher demog.PC1 = faster growth
 demog.PC2 <- PCA.demog$CA$u[,2]
 demog.PC3 <- PCA.demog$CA$u[,3]
+demog.PC4 <- PCA.demog$CA$u[,4]
 
 
-### Traits PCA ###
+### Traits ###
 PCA.traits <- rda(traits_sp[2:25], scale = T)
 summary(PCA.traits)$cont
 rownames(PCA.traits$CA$u) <- traits_sp$Species
 
 #pdf("./outputs/traits PCA1-2.pdf", width=5, height=5)
-biplot(PCA.traits, choices = c(1,2))
+biplot(PCA.traits, choices = c(1,2), display = "species")
 dev.off()
-# PC1: acquisitive-conservative spectrum
-# PC2: hydraulic safety versus 
-biplot(PCA.traits, choices = c(1, 4))
+# PC1: water acquisitive(+)-conservative(-) spectrum
+# PC2: hydraulic safety versus hydraulic efficiency?
+biplot(PCA.traits, choices = c(3,4), display = "species")
+# PC3: sclerophylly 
+# PC4: resource acquisitive(+)-conservative spectrum
 
 # RDA of traits against SSI and demographic params
-rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3, scale = T)
+rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4, scale = T)
 anova(rda.ssi, by="margin")
 
-### Exploring all possible trait-trait correlations ###
+### Investigating the effect of traits (PCs) on demographic and environmental niches
+
+# extract trait PCs
+tPC1 <- PCA.traits$CA$u[,1]
+tPC2 <- PCA.traits$CA$u[,2]
+tPC3 <- PCA.traits$CA$u[,3]
+tPC4 <- PCA.traits$CA$u[,4]
+tPC5 <- PCA.traits$CA$u[,5]
+tPC6 <- PCA.traits$CA$u[,6]
+tPC7 <- PCA.traits$CA$u[,7]
+tPC8 <- PCA.traits$CA$u[,8]
+
+#########################
+# TRAIT-LIFE HISTORY &  #
+#  TRAIT-ENV ANALYSIS   #
+#########################
+
+library(MuMIn)
 library(nlme)
 library(ape)
+
+### demog.PC1
+summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+(dr.dPC1 <- dredge(max.dPC1))
+summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+# higher demog.PC1 (growth rate) driven by higher tPC4 (resource acquisitive)
+plot(demog.PC1 ~ tPC4, type = "n"); text(demog.PC1 ~ tPC4, labels = names(tPC4))
+# higher demog.PC1 (growth rate) weakly driven by lower tPC2 (hydraulic efficiency + safety)
+plot(demog.PC1 ~ tPC2, type = "n"); text(demog.PC1 ~ tPC2, labels = names(tPC2))
+
+#pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
+biplot(PCA.traits, choices=c(4,2), display = "species") 
+dev.off()
+
+### demog.PC2
+summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+(dr.dPC2 <- dredge(max.dPC2))
+summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
+
+### demog.PC3
+summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            correlation=corBrownian(phy = tree), method="ML"))
+(dr.dPC3 <- dredge(max.dPC3))
+summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
+# lower demog.PC3 (less growth attenuation) enabled by lower tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
+plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC2))
+
+### demog.PC4
+summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                        correlation=corBrownian(phy = tree), method="ML"))
+(dr.dPC4 <- dredge(max.dPC4))
+# null model is best
+
+### SSI
+summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+            data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
+(dr.ssi <- dredge(max.ssi))
+summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
+
+#pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
+biplot(PCA.traits, choices=c(7,4), display = "species") 
+dev.off()
+
+plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
+plot(traits_sp$SSI ~ tPC1, type="n"); text(traits_sp$SSI ~ tPC1, labels=traits_sp$Species)
+plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_sp$Species)
+
+
+
+# are demog.PCs and SSI correlated?
+summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4,
+                       data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
+(dr.ssi.demo <- dredge(ssi.mod))
+# null model has dAIC of 1.52
+
+
+############################
+# TRAIT-TRAIT CORRELATIONS #
+############################
 
 traits_datonly <- traits_sp[,2:25]
 traits_datonly_scaled <- apply(traits_datonly, 2, scale)
@@ -119,14 +219,14 @@ pairwise <- data.frame(t(combn(ncol(traits_datonly_scaled),2)))
 names(pairwise) <- c("y", "x")
 
 for(i in 1:nrow(pairwise)){
-    y <- traits_datonly_scaled[, pairwise[i,"y"] ]
-    x <- traits_datonly_scaled[, pairwise[i,"x"] ]
-    mod <- gls(y ~ x, correlation=corBrownian(phy = tree), method="ML")
-    pairwise$y.name[i] <- names(traits_datonly)[ pairwise[i,"y"] ]
-    pairwise$x.name[i] <- names(traits_datonly)[ pairwise[i,"x"] ]
-    pairwise$coef[i] <- coef(mod)["x"]
-    pairwise$p.value[i] <- summary(mod)$tTable["x", "p-value"]
-    pairwise$AIC[i] <- summary(mod)$AIC
+  y <- traits_datonly_scaled[, pairwise[i,"y"] ]
+  x <- traits_datonly_scaled[, pairwise[i,"x"] ]
+  mod <- gls(y ~ x, correlation=corBrownian(phy = tree), method="ML")
+  pairwise$y.name[i] <- names(traits_datonly)[ pairwise[i,"y"] ]
+  pairwise$x.name[i] <- names(traits_datonly)[ pairwise[i,"x"] ]
+  pairwise$coef[i] <- coef(mod)["x"]
+  pairwise$p.value[i] <- summary(mod)$tTable["x", "p-value"]
+  pairwise$AIC[i] <- summary(mod)$AIC
 }
 pairwise[which(pairwise$p.value < 0.05),]
 
@@ -134,8 +234,8 @@ library(spaa)
 # have to convert to pairwise to a dist object
 sig.pairs <- pairwise[which(pairwise$p.value < 0.05),]
 pairwise.dist <- list2dist(data.frame(x = c(sig.pairs$x.name, sig.pairs$y.name),
-                     y = c(sig.pairs$y.name, sig.pairs$x.name),
-                     coef = c(sig.pairs$coef, sig.pairs$coef)
+                                      y = c(sig.pairs$y.name, sig.pairs$x.name),
+                                      coef = c(sig.pairs$coef, sig.pairs$coef)
 ))
 pairwise.dist[is.na(pairwise.dist)] <- 0
 
@@ -187,77 +287,6 @@ legend(x= 1.1, y = -0.2, title = "Organ", bty = "n",
 dev.off()
 circos.clear()
 
-
-### Investigating the effect of traits (PCs) on demographic and environmental niches
-
-# extract trait PCs
-tPC1 <- PCA.traits$CA$u[,1]
-tPC2 <- PCA.traits$CA$u[,2]
-tPC3 <- PCA.traits$CA$u[,3]
-tPC4 <- PCA.traits$CA$u[,4]
-tPC5 <- PCA.traits$CA$u[,5]
-tPC6 <- PCA.traits$CA$u[,6]
-tPC7 <- PCA.traits$CA$u[,7]
-tPC8 <- PCA.traits$CA$u[,8]
-
-# Fit GLS models
-library(MuMIn)
-
-# demog.PC1
-summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC1 <- dredge(max.dPC1))
-summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
-#pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
-biplot(PCA.traits, choices=c(2,4), display = "species") 
-dev.off()
-
-# demog.PC2
-summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC2 <- dredge(max.dPC2))
-summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
-
-# demog.PC3
-summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC3 <- dredge(max.dPC3))
-summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
-
-# SSI
-summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
-(dr.ssi <- dredge(max.ssi))
-summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
-
-#pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
-biplot(PCA.traits, choices=c(7,4), display = "species") 
-dev.off()
-
-
-
-# Plot the significant correlations
-plot(demog.PC1 ~ tPC2, type="n"); text(demog.PC1 ~ tPC2, labels=traits_sp$Species)
-plot(demog.PC1 ~ tPC4, type="n"); text(demog.PC1 ~ tPC4, labels=traits_sp$Species)
-plot(demog.PC2 ~ tPC1, type="n"); text(demog.PC2 ~ tPC1, labels=traits_sp$Species)
-plot(demog.PC3 ~ tPC1, type="n"); text(demog.PC3 ~ tPC1, labels=traits_sp$Species)
-plot(demog.PC3 ~ tPC2, type="n"); text(demog.PC3 ~ tPC2, labels=traits_sp$Species)
-plot(demog.PC3 ~ tPC3, type="n"); text(demog.PC3 ~ tPC3, labels=traits_sp$Species)
-plot(demog.PC3 ~ tPC4, type="n"); text(demog.PC3 ~ tPC4, labels=traits_sp$Species)
-plot(traits_sp$SSI ~ tPC1, type="n"); text(traits_sp$SSI ~ tPC1, labels=traits_sp$Species)
-plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
-plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_sp$Species)
-
-biplot(PCA.traits, choices = c(4,7))
-
-
-# are demog.PCs and SSI correlated?
-summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3,
-                       data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
-dr.ssi.demo <- dredge(ssi.mod)
-summary(get.models(dr.ssi.demo, subset=1)[[1]])
-
-
 #################
 # VISUALIZATION #
 #################
@@ -265,12 +294,6 @@ summary(get.models(dr.ssi.demo, subset=1)[[1]])
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
 S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
 
-abbrev <- function(x){
-  y <- gsub("\\.", " ", x)
-  toupper(paste0(
-    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
-    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
-  ))}
 AG_parms$sp <- abbrev(rownames(AG_parms))
 S_parms$sp <- abbrev(rownames(S_parms))
 
