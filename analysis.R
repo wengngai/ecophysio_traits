@@ -1,20 +1,6 @@
 library(vegan)
-traits_sp <- read.csv("combined traits_sp level_Sep21.csv", row.names = 1, header = T)
+traits_sp <- read.csv("combined traits_sp level_Oct21.csv", row.names = 1, header = T)
 summary(traits_sp)
-
-recruitment <- read.csv("./raw_data/5cm recruitment (29 spp).csv")
-
-abbrev <- function(x){
-  y <- gsub("\\.", " ", x)
-  toupper(paste0(
-    substr(lapply(strsplit(y, " "), "[[", 1), 0, 1),
-    substr(sapply(strsplit(y, " "), "[[", 2), 0, 2)
-  ))}
-
-#hist(sqrt(recruitment$recruitment), breaks=15)
-recruitment$recruitment <- sqrt(recruitment$recruitment)
-traits_sp$rec <- recruitment$recruitment[match(traits_sp$Species, abbrev(recruitment$species))]
-
 
 #####################
 # PHYLOGENETIC TREE #
@@ -91,30 +77,33 @@ dev.off()
 
 ### Demographic params ###
 names(traits_sp)
-PCA.demog <- rda(traits_sp[c(26:31,33)], scale=T)
+PCA.demog <- rda(traits_sp[25:32], scale=T)
 summary(PCA.demog)$cont
 rownames(PCA.demog$CA$u) <- traits_sp$Species
 
 #pdf("./outputs/demog PCA1-2.pdf", width=5, height=5)
 biplot(PCA.demog, choices=c(1,2), cex=3, cex.lab=1.5) 
 dev.off()
-# PC1 = growth rate (lower PC1 = faster growth rates) 
-# PC2 = growth-survival tradeoff
-#pdf("./outputs/demog PCA1-3.pdf", width=5, height=5)
-biplot(PCA.demog, choices=c(3,4))
-dev.off()
-# PC3 = attenuation of growth rate in larger trees (higher PC3 = more attenuation)
-# PC4 = ??
-# Even if Hmax is included, it does NOT load on to PC3, even though many subcanopy species have negative PC3
+# PC1 = fast-slow growth continuum (higher PC1 = faster growth rates) 
+# PC2 = small-large stature continuum (lower PC2 = larger stature)
+# invert so that higher PC2 = larger stature
+PCA.demog$CA$u[,2] <- -1 * PCA.demog$CA$u[,2]
+PCA.demog$CA$v[,2] <- -1 * PCA.demog$CA$v[,2]
 
-demog.PC1 <- PCA.demog$CA$u[,1] * -1 # reversed so that higher demog.PC1 = faster growth
+#pdf("./outputs/demog PCA1-3.pdf", width=5, height=5)
+biplot(PCA.demog, choices=c(1,3))
+dev.off()
+# PC3 = recruitment-growth/survival tradeoff (higher PC3 = more recruitment, higher survival)
+# PC4 = ??
+
+demog.PC1 <- PCA.demog$CA$u[,1]
 demog.PC2 <- PCA.demog$CA$u[,2]
 demog.PC3 <- PCA.demog$CA$u[,3]
 demog.PC4 <- PCA.demog$CA$u[,4]
 
 
 ### Traits ###
-PCA.traits <- rda(traits_sp[2:25], scale = T)
+PCA.traits <- rda(traits_sp[2:24], scale = T)
 summary(PCA.traits)$cont
 rownames(PCA.traits$CA$u) <- traits_sp$Species
 
@@ -124,11 +113,11 @@ dev.off()
 # PC1: water acquisitive(+)-conservative(-) spectrum
 # PC2: hydraulic safety versus hydraulic efficiency?
 biplot(PCA.traits, choices = c(3,4), display = "species")
-# PC3: sclerophylly 
+# PC3: sclerophylly?
 # PC4: resource acquisitive(+)-conservative spectrum
 
 # RDA of traits against SSI and demographic params
-rda.ssi <- rda(traits_sp[2:25] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4, scale = T)
+rda.ssi <- rda(traits_sp[2:24] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4, scale = T)
 anova(rda.ssi, by="margin")
 
 ### Investigating the effect of traits (PCs) on demographic and environmental niches
@@ -155,11 +144,12 @@ library(ape)
 ### demog.PC1
 summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC1 <- dredge(max.dPC1))
+(dr.dPC1 <- dredge(max.dPC1, extra = "R^2"))
 summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+
 # higher demog.PC1 (growth rate) driven by higher tPC4 (resource acquisitive)
 plot(demog.PC1 ~ tPC4, type = "n"); text(demog.PC1 ~ tPC4, labels = names(tPC4))
-# higher demog.PC1 (growth rate) weakly driven by lower tPC2 (hydraulic efficiency + safety)
+# higher demog.PC1 (growth rate)  driven by lower tPC2 (greater hydraulic investment)
 plot(demog.PC1 ~ tPC2, type = "n"); text(demog.PC1 ~ tPC2, labels = names(tPC2))
 
 #pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
@@ -169,51 +159,71 @@ dev.off()
 ### demog.PC2
 summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC2 <- dredge(max.dPC2))
+(dr.dPC2 <- dredge(max.dPC2, extra = "R^2"))
 summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
+# higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in spongy mesophyl (tPC1)
+plot(demog.PC2 ~ tPC1, type = "n"); text(demog.PC2 ~ tPC1, labels = names(tPC1))
+
 
 ### demog.PC3
 summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC3 <- dredge(max.dPC3))
+(dr.dPC3 <- dredge(max.dPC3, extra = "R^2"))
 summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
-# lower demog.PC3 (less growth attenuation) enabled by lower tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
-plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC2))
+# higher demog.PC3 (recruitment, survival) weakly driven by higher tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
+plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC1))
+# higher demog.PC3 (recruitment, survival) driven by higher tPC4 (more acquisitive leaf resource acquisition strategy)
+plot(demog.PC3 ~ tPC4, type = "n"); text(demog.PC3 ~ tPC4, labels = names(tPC4))
+biplot(PCA.traits, choices=c(3,4), display = "species")
 
 ### demog.PC4
 summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
                         correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC4 <- dredge(max.dPC4))
+(dr.dPC4 <- dredge(max.dPC4, extra = "R^2"))
 # null model is best
 
 ### SSI
 summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
             data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
-(dr.ssi <- dredge(max.ssi))
+(dr.ssi <- dredge(max.ssi, extra = "R^2"))
 summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
 
 #pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
-biplot(PCA.traits, choices=c(7,4), display = "species") 
+biplot(PCA.traits, choices=c(6,4), display = "species") 
 dev.off()
 
+# swamp adaptation weakkly driven by lower PC4 (more conservative leaf resource acquisition strategy)
 plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
-plot(traits_sp$SSI ~ tPC1, type="n"); text(traits_sp$SSI ~ tPC1, labels=traits_sp$Species)
-plot(traits_sp$SSI ~ tPC7, type="n"); text(traits_sp$SSI ~ tPC7, labels=traits_sp$Species)
-
-
+# swamp adaptation driven by higher vein densities with less occlusion (higher PC6)
+plot(traits_sp$SSI ~ tPC6, type="n"); text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species)
 
 # are demog.PCs and SSI correlated?
 summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4,
                        data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
 (dr.ssi.demo <- dredge(ssi.mod))
-# null model has dAIC of 1.52
+summary(get.models(dr.ssi.demo, subset = 1)[[1]])
+# swamp species tend to be more large statured, long-lived species (maybe just the result of plot selection)
+plot(traits_sp$SSI ~ demog.PC2, type="n"); text(traits_sp$SSI ~ demog.PC2, labels=traits_sp$Species)
+
+# AIC table
+AICtable <- rbind(
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC1[dr.dPC1$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC2[dr.dPC2$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC3[dr.dPC3$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.ssi[dr.ssi$delta < 2,]))
+
+#write.csv(AICtable, "D:\\Dropbox\\Functional Traits Project\\Figures\\AIC table.csv")
 
 
 ############################
 # TRAIT-TRAIT CORRELATIONS #
 ############################
 
-traits_datonly <- traits_sp[,2:25]
+traits_datonly <- traits_sp[,2:24]
 traits_datonly_scaled <- apply(traits_datonly, 2, scale)
 pairwise <- data.frame(t(combn(ncol(traits_datonly_scaled),2)))
 names(pairwise) <- c("y", "x")
@@ -259,9 +269,9 @@ ordered.traitnames <- c(
   "Th_LC", "Th_LE", "Th_SM", "Th_PM", "Th_UE", "Th_UC",
   "GCL", "SD", "L_VD",
   "VA", "T_VD", "RV", "CV", "SV", "OV", "TV", "VGI", "DH",
-  "WD", "Hmax"
+  "WD"
 )
-groupnames <- c(rep("leaf", 13), rep("wood", 11))
+groupnames <- c(rep("leaf", 13), rep("wood", 10))
 grid.col <- ifelse(groupnames=="leaf", "#DBD56E", "#403D58")
 names(groupnames) <- ordered.traitnames
 names(grid.col) <- ordered.traitnames
@@ -301,84 +311,150 @@ zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 
 ### PCA plot
-#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.pdf", height=6, width=8)
-#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.jpg", height=6, width=8, units="in", res=300)
-layout(matrix(c(1,1,2,1,1,3,4,5,6), ncol = 3))
-par(mar = c(5,5.5,2,2))
+
+# assign colors
+col.hi1 <- "#66D7D1"
+col.lo1 <- "#B1A792"
+col.hi2 <- "#538A95"
+col.lo2 <- "#FC7753"
+col.hi3 <- "#403D58"
+col.lo3 <- "#F7B39F"
+
+summary(PCA.demog)$cont
+
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.pdf", height=12, width=9)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog PCA.jpg", height=12, width=9, units="in", res=300)
+layout(matrix(c(1,1,2,2,3,1,1,2,2,4,5,6,7,8,9), ncol = 3))
+par(mar = c(4.5,5.5,1,1))
+# a) PCA of PC2 ~ PC1
 plot(demog.PC2 ~ demog.PC1, type = "n", ylim = c(-0.45,0.45), xlim = c(-0.6, 0.4),
-     ylab = "PC2 (20.5% vriance explained)", xlab = "PC1 (43.8% variance explained)", cex.lab = 1.5)
-for(i in 1:6){
-  if(i<=3) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
+     ylab = "PC2 (21.8% vriance explained)", xlab = "PC1 (33.5% variance explained)", cex.lab = 1.5)
+for(i in 1:8){
+  if(i==1|i==8) arrowcol <- "#DBD56E" else if(i<=4) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
   arrows(0, 0, PCA.demog$CA$v[i,1]/2, PCA.demog$CA$v[i,2]/2, lwd = 2, col = arrowcol)
   text(x = PCA.demog$CA$v[i,1]/1.8, y = PCA.demog$CA$v[i,2]/1.8, lwd = 2, col = arrowcol, 
        labels = rownames(PCA.demog$CA$v)[i], cex = 1.2 )
 }
 text(demog.PC2 ~ demog.PC1, labels = traits_sp$Species,
-     col = ifelse(traits_sp$Species %in% c("LMU","GPA"), "#F7B39F", 
-                  ifelse(traits_sp$Species %in% c("PEC","EMA"), "#66D7D1",
-                         ifelse(traits_sp$Species %in% c("PPO", "GNE"), "#FC7753",
-                                ifelse(traits_sp$Species %in% c("RCI", "AAN"), "#538A95", "grey")))),
-     cex = ifelse(traits_sp$Species %in% c("LMU", "GPA", "PEC", "EMA", "PPO", "GNE", "RCI", "AAN"), 1, 0.7)
+     col = ifelse(traits_sp$Species %in% c("LMU","SCE"), col.hi2, 
+                  ifelse(traits_sp$Species %in% c("ASY","EMA"), col.lo2,
+                         ifelse(traits_sp$Species %in% c("PPO", "GNE"), col.hi1,
+                                ifelse(traits_sp$Species %in% c("RCI", "AAN"), col.lo1, "grey")))),
+     cex = ifelse(traits_sp$Species %in% c("LMU", "ASY", "SCE", "EMA", "PPO", "GNE", "RCI", "AAN"), 1.2, 0.7)
      )
-legend("bottomleft", bty = "n", lwd = 2, col=c("#403D58","#8E8963"),
-       legend = c("Growth model parameters: a, b, c (panels b & d)", "Survival model parameters: K, r1, p1 (panels c & e)"))
-mtext(side = 3, line = -1.2, text = " a)", adj = 0)
+legend("bottomleft", bty = "n", lwd = 2, col=c("#403D58","#8E8963", "#DBD56E"),
+       legend = c("Growth model parameters: a, b, c (panels c & h)", 
+                  "Survival model parameters: K, r, p (panels d, f & i)", 
+                  "Other parameters: Hmax (panel e), rec (panel g)")
+       )
+mtext(side = 3, line = -1.3, text = " a)", adj = 0)
 
-## Demog PC1
-# Growth
+# b) PCA of PC3 ~ PC1
+plot(demog.PC3 ~ demog.PC1, type = "n", ylim = c(-0.45,0.45), xlim = c(-0.6, 0.4),
+     ylab = "PC3 (13.3% variance explained)", xlab = "PC1 (33.5% variance explained)", cex.lab = 1.5)
+for(i in 1:8){
+  if(i==1|i==8) arrowcol <- "#DBD56E" else if(i<=4) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
+  arrows(0, 0, PCA.demog$CA$v[i,1]/2, PCA.demog$CA$v[i,3]/2, lwd = 2, col = arrowcol)
+  text(x = PCA.demog$CA$v[i,1]/1.8, y = PCA.demog$CA$v[i,3]/1.8, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.demog$CA$v)[i], cex = 1.2 )
+}
+text(demog.PC3 ~ demog.PC1, labels = traits_sp$Species,
+     col = ifelse(traits_sp$Species %in% c("AFR","GAX"), col.hi3, 
+                  ifelse(traits_sp$Species %in% c("ACL","MGI"), col.lo3, "grey")),
+     cex = ifelse(traits_sp$Species %in% c("AFR", "GAX", "ACL", "MGI"), 1.2, 0.7)
+)
+#legend("bottomleft", bty = "n", lwd = 2, col=c("#403D58","#8E8963", "#DBD56E"),
+#       legend = c("Growth model parameters: a, b, c (panel g)", 
+#                  "Survival model parameters: K, r, p (panel h)", 
+#                  "Recruitment: rec")
+#)
+mtext(side = 3, line = -1.3, text = " b)", adj = 0)
+
+# c) Growth (Demog PC1)
 newdbh <- seq(1,50,len=100)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
-lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
-        newdbh, col = "#538A95", lwd = 2)
 lines(zeide_w_transform(a = AG_parms["Prunus polystachya","a"], b = AG_parms["Prunus polystachya", "b"], c = AG_parms["Prunus polystachya", "c"], dbh = newdbh) ~
-        newdbh, col = "#FC7753", lwd = 2)
+        newdbh, col = col.hi1, lwd = 2)
 lines(zeide_w_transform(a = AG_parms["Gironniera nervosa","a"], b = AG_parms["Gironniera nervosa", "b"], c = AG_parms["Gironniera nervosa", "c"], dbh = newdbh) ~
-        newdbh, col = "#FC7753", lwd = 2)
+        newdbh, col = col.hi1, lwd = 2)
 lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
-        newdbh, col = "#538A95", lwd = 2)
-#text(x = rep(20,4), y = c(0.65, 0.48, 0.26, 0.17), labels = c("PPO", "GNE", "AAN", "RCI"), col=c("#FC7753", "#FC7753", "#538A95", "#538A95"))
-mtext(side = 3, line = -1.2, text = " b)", adj = 0)
+        newdbh, col = col.lo1, lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Alstonia angustifolia","a"], b = AG_parms["Alstonia angustifolia", "b"], c = AG_parms["Alstonia angustifolia", "c"], dbh = newdbh) ~ 
+        newdbh, col = col.lo1, lwd = 2)
+#text(x = rep(20,4), y = c(0.65, 0.48, 0.26, 0.17), labels = c("PPO", "GNE", "AAN", "RCI"), col=c(col.hi1, col.hi1, col.lo1, col.lo1))
+mtext(side = 3, line = -1.3, text = " c)", adj = 0)
 
-# Survival
+# d) Survival (Demog PC1)
 newdbh <- seq(0.001, 0.5, len=200)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n", cex.lab = 1.5)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
 lines(needham_w_transform(K = S_parms["Gironniera nervosa","K"], r = S_parms["Gironniera nervosa", "r1"], p = S_parms["Gironniera nervosa", "p1"], dbh = newdbh) ~
-        newdbh, col = "#FC7753", lwd = 2)
+        newdbh, col = col.hi1, lwd = 2)
 lines(needham_w_transform(K = S_parms["Prunus polystachya","K"], r = S_parms["Prunus polystachya", "r1"], p = S_parms["Prunus polystachya", "p1"], dbh = newdbh) ~
-        newdbh, col = "#FC7753", lwd = 2)
+        newdbh, col = col.hi1, lwd = 2)
 lines(needham_w_transform(K = S_parms["Alstonia angustifolia","K"], r = S_parms["Alstonia angustifolia", "r1"], p = S_parms["Alstonia angustifolia", "p1"], dbh = newdbh) ~
-        newdbh, col = "#538A95", lwd = 2)
+        newdbh, col = col.lo1, lwd = 2)
 lines(needham_w_transform(K = S_parms["Rhodamnia cinerea","K"], r = S_parms["Rhodamnia cinerea", "r1"], p = S_parms["Rhodamnia cinerea", "p1"], dbh = newdbh) ~
-        newdbh, col = "#538A95", lwd = 2)
-legend('bottomright', bty = "n", legend = c("Low PC1: AAN, RCI", "High PC1: GNE, PPO"), col = c("#538A95", "#FC7753"), lwd = 2)
-mtext(side = 3, line = -1.2, text = " c)", adj = 0)
+        newdbh, col = col.lo1, lwd = 2)
+legend('bottomright', bty = "n", legend = c("High PC1: GNE, PPO", "Low PC1: AAN, RCI"), col = c(col.hi1, col.lo1), lwd = 2)
+mtext(side = 3, line = -1.3, text = " d)", adj = 0)
 
-## Demog PC2
-# Growth
-newdbh <- seq(1,50,len=100)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.45), xlab="DBH (cm)", ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
-lines(zeide_w_transform(a = AG_parms["Lophopetalum multinervium","a"], b = AG_parms["Lophopetalum multinervium", "b"], c = AG_parms["Lophopetalum multinervium", "c"], dbh = newdbh) ~ 
-        newdbh, col = "#F7B39F", lwd = 2)
-lines(zeide_w_transform(a = AG_parms["Elaeocarpus mastersii","a"], b = AG_parms["Elaeocarpus mastersii", "b"], c = AG_parms["Elaeocarpus mastersii", "c"], dbh = newdbh) ~
-        newdbh, col = "#66D7D1", lwd = 2)
-lines(zeide_w_transform(a = AG_parms["Garcinia parvifolia","a"], b = AG_parms["Garcinia parvifolia", "b"], c = AG_parms["Garcinia parvifolia", "c"], dbh = newdbh) ~ 
-        newdbh, col = "#F7B39F", lwd = 2)
-lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
-        newdbh, col = "#66D7D1", lwd = 2)
-mtext(side = 3, line = -1.2, text = " d)", adj = 0)
+# e) Hmax (Demog PC2)
+par(mar = c(4.5,7,1,1))
+h.bar <- traits_sp$Hmax[match(c("LMU", "SCE", "EMA", "ASY"),traits_sp$Species)]
+barplot(h.bar, beside = T, col = c(col.hi2, col.hi2, col.lo2, col.lo2),
+        ylab = "Hmax (m)", xlab = "Species", ylim = c(0,50),
+        names.arg = c("LMU", "SCE", "EMA", "ASY"), cex.lab = 1.5, cex.names = 1.2)
+box()
+mtext(side = 3, line = -1.3, text = " e)", adj = 0)
 
-# Survival
+# f) Survival (Demog PC2)
 newdbh <- seq(0.001, 0.5, len=200)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival probability", type="n", cex.lab = 1.5)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
 lines(needham_w_transform(K = S_parms["Lophopetalum multinervium","K"], r = S_parms["Lophopetalum multinervium", "r1"], p = S_parms["Lophopetalum multinervium", "p1"], dbh = newdbh) ~
-        newdbh, col = "#F7B39F", lwd = 2)
+        newdbh, col = col.hi2, lwd = 2)
+lines(needham_w_transform(K = S_parms["Strombosia ceylanica","K"], r = S_parms["Strombosia ceylanica", "r1"], p = S_parms["Strombosia ceylanica", "p1"], dbh = newdbh) ~
+        newdbh, col = col.hi2, lwd = 2)
+lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
+        newdbh, col = col.lo2, lwd = 2)
 lines(needham_w_transform(K = S_parms["Elaeocarpus mastersii","K"], r = S_parms["Elaeocarpus mastersii", "r1"], p = S_parms["Elaeocarpus mastersii", "p1"], dbh = newdbh) ~
-        newdbh, col = "#66D7D1", lwd = 2)
-lines(needham_w_transform(K = S_parms["Garcinia parvifolia","K"], r = S_parms["Garcinia parvifolia", "r1"], p = S_parms["Garcinia parvifolia", "p1"], dbh = newdbh) ~
-        newdbh, col = "#F7B39F", lwd = 2)
-lines(needham_w_transform(K = S_parms["Pternandra echinata","K"], r = S_parms["Pternandra echinata", "r1"], p = S_parms["Pternandra echinata", "p1"], dbh = newdbh) ~
-        newdbh, col = "#66D7D1", lwd = 2)
-mtext(side = 3, line = -1.2, text = " e)", adj = 0)
-legend('bottomright', bty = "n", legend = c("Low PC2: EMA, PEC", "High PC2: GPA, LMU"), col = c("#66D7D1", "#F7B39F"), lwd = 2)
+        newdbh, col = col.lo2, lwd = 2)
+mtext(side = 3, line = -1.3, text = " f)", adj = 0)
+legend('bottomright', bty = "n", legend = c("High PC2: LMU, SCE", "Low PC2: ASY, EMA"), col = c(col.hi2, col.lo2), lwd = 2)
+
+# g) Recruitment (Demog PC3)
+b.bar <- traits_sp$rec[match(c("AFR", "GAX", "ACL", "MGI"),traits_sp$Species)]^2
+barplot(b.bar, beside = T, col = c(col.hi3, col.hi3, col.lo3, col.lo3),
+        ylab = expression(atop("BNR", "(recruits" ~ year^-1 ~ m^-2 ~ ")")), 
+        xlab = "Species", ylim = c(0,25),
+        names.arg = c("AFR", "GAX", "ACL", "MGI"), cex.lab = 1.5, cex.names = 1.2)
+box()
+mtext(side = 3, line = -1.3, text = " g)", adj = 0)
+
+# h) Growth (Demog PC3)
+newdbh <- seq(1,50,len=100)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.8), xlab="DBH (cm)", ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
+lines(zeide_w_transform(a = AG_parms["Gynotroches axillaris","a"], b = AG_parms["Gynotroches axillaris", "b"], c = AG_parms["Gynotroches axillaris", "c"], dbh = newdbh) ~
+        newdbh, col = col.hi3, lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Aporosa frutescens","a"], b = AG_parms["Aporosa frutescens", "b"], c = AG_parms["Aporosa frutescens", "c"], dbh = newdbh) ~
+        newdbh, col = col.hi3, lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Archidendron clypearia","a"], b = AG_parms["Archidendron clypearia", "b"], c = AG_parms["Archidendron clypearia", "c"], dbh = newdbh) ~
+        newdbh, col = col.lo3, lwd = 2)
+lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Macaranga gigantea", "b"], c = AG_parms["Macaranga gigantea", "c"], dbh = newdbh) ~ 
+        newdbh, col = col.lo3, lwd = 2)
+mtext(side = 3, line = -1.3, text = " h)", adj = 0)
+
+# i) Survival (Demog PC3)
+newdbh <- seq(0.001, 0.5, len=200)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
+lines(needham_w_transform(K = S_parms["Macaranga gigantea","K"], r = S_parms["Macaranga gigantea", "r1"], p = S_parms["Macaranga gigantea", "p1"], dbh = newdbh) ~
+        newdbh, col = col.lo3, lwd = 2)
+lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
+        newdbh, col = col.lo3, lwd = 2)
+lines(needham_w_transform(K = S_parms["Aporosa frutescens","K"], r = S_parms["Aporosa frutescens", "r1"], p = S_parms["Aporosa frutescens", "p1"], dbh = newdbh) ~
+        newdbh, col = col.hi3, lwd = 2)
+lines(needham_w_transform(K = S_parms["Gynotroches axillaris","K"], r = S_parms["Gynotroches axillaris", "r1"], p = S_parms["Gynotroches axillaris", "p1"], dbh = newdbh) ~
+        newdbh, col = col.hi3, lwd = 2)
+mtext(side = 3, line = -1.3, text = " i)", adj = 0)
+legend('bottomright', bty = "n", legend = c("High PC3: AFR, GAX", "Low PC3: ACL, MGI"), col = c(col.hi3, col.lo3), lwd = 2)
 
 dev.off()

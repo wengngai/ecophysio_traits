@@ -9,6 +9,7 @@ stomata <- read.csv("./raw_data/stomata.csv", header=T, stringsAsFactors = T)
 lvein <- read.csv("./raw_data/leaf vein.csv", header=T, stringsAsFactors = T)
 llayers <- read.csv("./raw_data/leaf layers.csv", header=T, stringsAsFactors = T)
 lsoft <- read.csv("./raw_data/leaf soft traits.csv", header=T, stringsAsFactors = T)
+recruitment <- read.csv("./raw_data/5cm recruitment (29 spp).csv")
 
 ### CNR, HMAX ###
 # Already summarized at species mean level
@@ -168,6 +169,8 @@ names(llayers_sp)[2:7] <- paste0("Th_", names(llayers_sp)[2:7])
 ### DEMOGRAPHIC RATE PARAMETERS ###
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
 S_parms <- read.csv("./raw_data/survival model parms Sep21.csv", row.names=1)
+# rename r1 and p1 to just r and p
+names(S_parms) <- c("K", "r", "p")
 
 abbrev <- function(x){
     y <- gsub("\\.", " ", x)
@@ -215,6 +218,7 @@ traits_sp <- data.frame(traits_sp,
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
                    AG_parms[match(traits_sp$Species, AG_parms$sp), 1:3],
                    S_parms[match(traits_sp$Species, S_parms$sp), 1:3],
+                   rec = recruitment$recruitment[match(traits_sp$Species, abbrev(recruitment$species))],
                    SSI = SSI$SSI[match(traits_sp$Species, SSI$Species)]
                    )
 
@@ -249,8 +253,9 @@ traits_sp[c("Th_LC", "Th_PM", "Th_SM", "Th_UC", "Th_UE")] <-
 traits_sp$K <- logit(traits_sp$K)
 traits_sp$p1 <- logtrans(traits_sp$p1)
 traits_sp$b <- log(traits_sp$b)
+traits_sp$rec <- sqrt(traits_sp$rec)
 summary(traits_sp)
-#write.csv(traits_sp, "combined traits_sp level_Sep21.csv")
+#write.csv(traits_sp, "combined traits_sp level_Oct21.csv")
 
 
 ## Defining pairs.cor() function
@@ -278,3 +283,4 @@ pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
     }
     pairs(x,diag.panel=panel.hist,lower.panel=panel.cor,upper.panel=panel.smooth, ...)
 }
+
