@@ -64,9 +64,10 @@ tree$tip.label <- abbrev.tip(tree$tip.label)
 #tree$tip.label <- spp_list$Species[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 #tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
 
-#pdf("./outputs/Phylo tree.pdf", width=8, height=8)
-plot(tree, no.margin=TRUE, 
-     tip.color = ifelse(traits_sp$SSI > 0.66, "steelblue", ifelse(traits_sp$SSI < 0.33, "forestgreen", "grey40")))
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.pdf", width = 8, height = 8)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.jpg", width = 8, height = 8, units = "in", res = 300)
+plot(tree, no.margin=TRUE,
+     tip.color = ifelse(traits_sp$SSI > 0.67, "#538A95", ifelse(traits_sp$SSI < 0.33, "#FC7753", "#B1A792")))
 dev.off()
 
 
@@ -115,6 +116,8 @@ dev.off()
 biplot(PCA.traits, choices = c(3,4), display = "species")
 # PC3: sclerophylly?
 # PC4: resource acquisitive(+)-conservative spectrum
+biplot(PCA.traits, choices = c(4,6), display = "species")
+
 
 # RDA of traits against SSI and demographic params
 rda.ssi <- rda(traits_sp[2:24] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4, scale = T)
@@ -192,7 +195,7 @@ summary(best.ssi <- get.models(dr.ssi, subset=1)[[1]])
 biplot(PCA.traits, choices=c(6,4), display = "species") 
 dev.off()
 
-# swamp adaptation weakkly driven by lower PC4 (more conservative leaf resource acquisition strategy)
+# swamp adaptation weakly driven by lower PC4 (more conservative leaf resource acquisition strategy)
 plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
 # swamp adaptation driven by higher vein densities with less occlusion (higher PC6)
 plot(traits_sp$SSI ~ tPC6, type="n"); text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species)
@@ -458,3 +461,45 @@ mtext(side = 3, line = -1.3, text = " i)", adj = 0)
 legend('bottomright', bty = "n", legend = c("High PC3: AFR, GAX", "Low PC3: ACL, MGI"), col = c(col.hi3, col.lo3), lwd = 2)
 
 dev.off()
+
+
+# Trait PCA biplots
+
+summary(PCA.traits)$cont
+
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.pdf", height=10, width=7)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.jpg", height=10, width=7, units="in", res=300)
+
+# a) PC1 - PC2
+par(mfrow = c(2,1), mar = c(5,5.5,2,2))
+plot(x = PCA.traits$CA$v[,1]*1.25, y = PCA.traits$CA$v[,2]*1.25, type = "n",
+     ylab = "Trait PC2 (19.5% variance explained)", xlab = "Trait PC1 (22.5% variance explained)",
+     cex.lab = 1.5)
+for(i in 1:nrow(PCA.traits$CA$v)){
+  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
+  arrows(0, 0, PCA.traits$CA$v[i,1], PCA.traits$CA$v[i,2], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,1]*1.2, y = PCA.traits$CA$v[i,2]*1.2, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
+}
+mtext(text = " a)", side = 3, adj = 0, cex = 1.5, line = -1.5)
+
+# b) PC4 - PC6
+plot(x = PCA.traits$CA$v[,4]*1.25, y = PCA.traits$CA$v[,6]*1.25, type = "n",
+     ylab = "Trait PC6 (7.9% variance explained)", xlab = "Trait PC4 (9.9% variance explained)",
+     cex.lab = 1.5)
+for(i in 1:nrow(PCA.traits$CA$v)){
+  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
+  arrows(0, 0, PCA.traits$CA$v[i,4], PCA.traits$CA$v[i,6], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,4]*1.2, y = PCA.traits$CA$v[i,6]*1.2, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
+}
+mtext(text = " b)", side = 3, adj = 0, cex = 1.5, line = -1.5)
+legend('bottomright', legend = c("Leaf traits", "Wood traits"), lwd = 2, col = c("#403D58", "#DBD56E"), bty = "n")
+
+dev.off()
+
+
+
+
+
+
