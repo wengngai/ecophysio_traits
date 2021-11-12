@@ -332,7 +332,7 @@ layout(matrix(c(1,1,2,2,3,1,1,2,2,4,5,6,7,8,9), ncol = 3))
 par(mar = c(4.5,5.5,1,1))
 # a) PCA of PC2 ~ PC1
 plot(demog.PC2 ~ demog.PC1, type = "n", ylim = c(-0.45,0.45), xlim = c(-0.6, 0.4),
-     ylab = "PC2 (21.8% vriance explained)", xlab = "PC1 (33.5% variance explained)", cex.lab = 1.5)
+     ylab = "Demographic PC2 (21.8% vriance explained)", xlab = "Demographic PC1 (33.5% variance explained)", cex.lab = 1.5)
 for(i in 1:8){
   if(i==1|i==8) arrowcol <- "#DBD56E" else if(i<=4) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
   arrows(0, 0, PCA.demog$CA$v[i,1]/2, PCA.demog$CA$v[i,2]/2, lwd = 2, col = arrowcol)
@@ -355,7 +355,7 @@ mtext(side = 3, line = -1.3, text = " a)", adj = 0)
 
 # b) PCA of PC3 ~ PC1
 plot(demog.PC3 ~ demog.PC1, type = "n", ylim = c(-0.45,0.45), xlim = c(-0.6, 0.4),
-     ylab = "PC3 (13.3% variance explained)", xlab = "PC1 (33.5% variance explained)", cex.lab = 1.5)
+     ylab = "Demographic PC3 (13.3% variance explained)", xlab = "Demographic PC1 (33.5% variance explained)", cex.lab = 1.5)
 for(i in 1:8){
   if(i==1|i==8) arrowcol <- "#DBD56E" else if(i<=4) arrowcol <- "#403D58" else arrowcol <- "#8E8963" 
   arrows(0, 0, PCA.demog$CA$v[i,1]/2, PCA.demog$CA$v[i,3]/2, lwd = 2, col = arrowcol)
