@@ -136,7 +136,7 @@ tPC7 <- PCA.traits$CA$u[,7]
 tPC8 <- PCA.traits$CA$u[,8]
 
 # PCA of everything (demog params and traits)
-PCA.all <- rda(traits_sp[2:32], scale=T)
+PCA.all <- rda(traits_sp[2:33], scale=T)
 biplot(PCA.all, choices = c(1,2), display = "species")
 summary(PCA.all)$cont
 
