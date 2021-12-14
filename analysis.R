@@ -7,46 +7,18 @@ summary(traits_sp)
 #####################
 
 library(brranching)
+#devtools::install_github("jinyizju/V.PhyloMaker")
+library(V.PhyloMaker)
+library(phytools)
 
-#Input taxonomic names
-
-phylolist <- c(
-    "Alstonia angustifolia",
-    "Aporosa frutescens",
-    "Aporosa symplocoides",
-    "Pithecellobium clypearia",
-    "Baccaurea bracteata",
-    "Bhesa paniculata",
-    "Campnosperma squamatum",
-    "Elaeocarpus mastersii",
-    "Garcinia parvifolia",
-    "Gironniera nervosa",
-    "Gynotroches axillaris",
-    "Horsfieldia crassifolia",
-    "Knema malayana",
-    "Lophopetalum multinervium",
-    "Macaranga bancana",
-    "Macaranga gigantea",
-    "Macaranga recurvata",
-    "Mussaendopsis beccariana",
-    "Pellacalyx axillaris",
-    "Pometia pinnata",
-    "Prunus polystachya",
-    "Pternandra coerulescens",
-    "Pternandra echinata",
-    "Rhodamnia cinerea",
-    "Strombosia ceylanica",
-    "Syzygium pachyphyllum",
-    "Timonius flavescens",
-    "Timonius wallichianus",
-    "Xanthophyllum flavescens"
-)
-
-tree = phylomatic(taxa=phylolist, storedtree = "zanne2014")
-
-# rename tips
 spp_list <- read.csv("./raw_data/species list.csv")
-spp_list$long_name <- paste0(spp_list$Species, " (", spp_list$Family, ")")
+V.spp_list <- data.frame(
+  species = gsub(" ", "_", spp_list$Species),
+  genus = sapply(strsplit(spp_list$Species, " "), "[[", 1),
+  family = spp_list$Family
+)
+tree <- phylo.maker(V.spp_list, scenarios = c("S1", "S2", "S3"))
+plotTree(tree$scenario.3)
 
 library(stringr)
 abbrev.tip <- function(x){
@@ -57,7 +29,7 @@ abbrev.tip <- function(x){
 }
 
 # sort traits_sp into order of phylo tree first
-traits_sp <- traits_sp[match(abbrev.tip(tree$tip.label), traits_sp$Species),]
+traits_sp <- traits_sp[match(abbrev.tip(tree$scenario.3$tip.label), traits_sp$Species),]
 
 # EITHER OR:
 tree$tip.label <- abbrev.tip(tree$tip.label)
@@ -66,10 +38,9 @@ tree$tip.label <- abbrev.tip(tree$tip.label)
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.pdf", width = 8, height = 8)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.jpg", width = 8, height = 8, units = "in", res = 300)
-plot(tree, no.margin=TRUE,
+plot(tree$scenario.3, no.margin=TRUE,
      tip.color = ifelse(traits_sp$SSI > 0.67, "#538A95", ifelse(traits_sp$SSI < 0.33, "#FC7753", "#B1A792")))
 dev.off()
-
 
 #######################
 # DIMENSION REDUCTION #
@@ -85,14 +56,14 @@ rownames(PCA.demog$CA$u) <- traits_sp$Species
 #pdf("./outputs/demog PCA1-2.pdf", width=5, height=5)
 biplot(PCA.demog, choices=c(1,2), cex=3, cex.lab=1.5) 
 dev.off()
-# PC1 = fast-slow growth continuum (higher PC1 = faster growth rates) 
-# PC2 = small-large stature continuum (lower PC2 = larger stature)
-# invert so that higher PC2 = larger stature
-PCA.demog$CA$u[,2] <- -1 * PCA.demog$CA$u[,2]
-PCA.demog$CA$v[,2] <- -1 * PCA.demog$CA$v[,2]
+# PC1 = fast-slow growth continuum (lower PC1 = faster growth rates) 
+# PC2 = small-large stature continuum (higher PC2 = larger stature)
+# invert so that higher PC1 = faster growth
+PCA.demog$CA$u[,1] <- -1 * PCA.demog$CA$u[,1]
+PCA.demog$CA$v[,1] <- -1 * PCA.demog$CA$v[,1]
 
 #pdf("./outputs/demog PCA1-3.pdf", width=5, height=5)
-biplot(PCA.demog, choices=c(1,3))
+biplot(PCA.demog, choices=c(4,3))
 dev.off()
 # PC3 = recruitment-growth/survival tradeoff (higher PC3 = more recruitment, higher survival)
 # PC4 = ??
@@ -109,7 +80,7 @@ summary(PCA.traits)$cont
 rownames(PCA.traits$CA$u) <- traits_sp$Species
 
 #pdf("./outputs/traits PCA1-2.pdf", width=5, height=5)
-biplot(PCA.traits, choices = c(1,2))
+biplot(PCA.traits, choices = c(1,2), display = "species")
 dev.off()
 # PC1: water acquisitive(+)-conservative(-) spectrum
 # PC2: hydraulic safety versus hydraulic efficiency?
@@ -118,6 +89,9 @@ biplot(PCA.traits, choices = c(3,4), display = "species")
 # PC4: resource acquisitive(+)-conservative spectrum
 biplot(PCA.traits, choices = c(4,6), display = "species")
 
+# invert so that higher tPC4 = more acquisitive
+PCA.traits$CA$u[,4] <- -1 * PCA.traits$CA$u[,4]
+PCA.traits$CA$v[,4] <- -1 * PCA.traits$CA$v[,4]
 
 # RDA of traits against SSI and demographic params
 rda.ssi <- rda(traits_sp[2:24] ~ traits_sp$SSI + demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4, scale = T)
@@ -127,7 +101,7 @@ anova(rda.ssi, by="margin")
 
 # extract trait PCs
 tPC1 <- PCA.traits$CA$u[,1]
-tPC2 <- PCA.traits$CA$u[,2] * -1 # reverse direction so that hydraulic investment is positive
+tPC2 <- PCA.traits$CA$u[,2]
 tPC3 <- PCA.traits$CA$u[,3]
 tPC4 <- PCA.traits$CA$u[,4]
 tPC5 <- PCA.traits$CA$u[,5]
@@ -151,14 +125,16 @@ library(ape)
 
 ### demog.PC1
 summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC1 <- dredge(max.dPC1, extra = "R^2"))
+            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+#summary(lm.dPC1 <- lm(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
+head(dr.dPC1 <- dredge(max.dPC1, extra = "R^2", m.lim = c(0,4)))
+#(dr.dPC1.lm <- dredge(lm.dPC1, extra = "R^2", m.lim = c(0,4)))
 summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
 
 # higher demog.PC1 (growth rate) driven by higher tPC4 (resource acquisitive)
 plot(demog.PC1 ~ tPC4, type = "n"); text(demog.PC1 ~ tPC4, labels = names(tPC4))
-data.frame()
-# higher demog.PC1 (growth rate)  driven by lower tPC2 (greater hydraulic investment)
+
+# higher demog.PC1 (growth rate)  driven by higher tPC2 (greater hydraulic investment)
 plot(demog.PC1 ~ tPC2, type = "n"); text(demog.PC1 ~ tPC2, labels = names(tPC2))
 
 #pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
@@ -167,48 +143,63 @@ dev.off()
 
 ### demog.PC2
 summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC2 <- dredge(max.dPC2, extra = "R^2"))
+            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+#summary(lm.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
+head(dr.dPC2 <- dredge(max.dPC2, extra = "R^2", m.lim = c(0,4)))
+#(dr.dPC2.lm <- dredge(lm.dPC2, extra = "R^2", m.lim = c(0,4)))
 summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
-# higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in spongy mesophyl (tPC1)
-plot(demog.PC2 ~ tPC1, type = "n"); text(demog.PC2 ~ tPC1, labels = names(tPC1))
+# higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in water transport. but correlations weak
+plot(demog.PC2 ~ tPC6, type = "n"); text(demog.PC2 ~ tPC6, labels = names(tPC6))
+plot(demog.PC2 ~ tPC7, type = "n"); text(demog.PC2 ~ tPC7, labels = names(tPC7))
 
+biplot(PCA.traits, choices=c(6,7), display = "species") 
 
 ### demog.PC3
 summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree), method="ML"))
-(dr.dPC3 <- dredge(max.dPC3, extra = "R^2"))
+            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+head(dr.dPC3 <- dredge(max.dPC3, extra = "R^2", m.lim = c(0,4)))
 summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
-# higher demog.PC3 (recruitment, survival) weakly driven by higher tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
+# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
 plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC1))
+# higher demog.PC3 (recruitment, survival) driven by lower tPC2 (lesser hydraulic investment)
+plot(demog.PC3 ~ tPC2, type = "n"); text(demog.PC3 ~ tPC2, labels = names(tPC2))
 # higher demog.PC3 (recruitment, survival) driven by higher tPC4 (more acquisitive leaf resource acquisition strategy)
 plot(demog.PC3 ~ tPC4, type = "n"); text(demog.PC3 ~ tPC4, labels = names(tPC4))
+# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC3 
+# (thicker, more sclerophyllous leaves with lower palisade meso and LDMC) but this trait only found in top model
+plot(demog.PC3 ~ tPC3, type = "n"); text(demog.PC3 ~ tPC3, labels = names(tPC3))
+
+biplot(PCA.traits, choices=c(1,2), display = "species")
 biplot(PCA.traits, choices=c(3,4), display = "species")
+
+biplot(PCA.demog, choices=c(3,4))
 
 ### demog.PC4
 summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-                        correlation=corBrownian(phy = tree), method="ML"))
+                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
 (dr.dPC4 <- dredge(max.dPC4, extra = "R^2"))
-# null model is best
+# trait PC2
 
 ### SSI
 summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
-(dr.ssi <- dredge(max.ssi, extra = "R^2"))
+            data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+head(dr.ssi <- dredge(max.ssi, extra = "R^2"))
 summary(best.dssi <- get.models(dr.ssi, subset=1)[[1]])
 
 #pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
-biplot(PCA.traits, choices=c(6,4), display = "species") 
+biplot(PCA.traits, choices=c(6,3), display = "species") 
 dev.off()
 
 # swamp adaptation weakly driven by lower PC4 (more conservative leaf resource acquisition strategy)
 plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
-# swamp adaptation driven by higher vein densities with less occlusion (higher PC6)
+# swamp adaptation enabled by leaf sclerophylly (lower PC3)
+plot(traits_sp$SSI ~ tPC3, type="n"); text(traits_sp$SSI ~ tPC3, labels=traits_sp$Species)
+# swamp adaptation driven by higher vein densities with less occlusion (lower PC6)
 plot(traits_sp$SSI ~ tPC6, type="n"); text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species)
 
 # are demog.PCs and SSI correlated?
 summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4,
-                       data = traits_sp, correlation=corBrownian(phy = tree), method="ML"))
+                       data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
 (dr.ssi.demo <- dredge(ssi.mod))
 summary(get.models(dr.ssi.demo, subset = 1)[[1]])
 # swamp species tend to be more large statured, long-lived species (maybe just the result of plot selection)
@@ -240,7 +231,7 @@ names(pairwise) <- c("y", "x")
 for(i in 1:nrow(pairwise)){
   y <- traits_datonly_scaled[, pairwise[i,"y"] ]
   x <- traits_datonly_scaled[, pairwise[i,"x"] ]
-  mod <- gls(y ~ x, correlation=corBrownian(phy = tree), method="ML")
+  mod <- gls(y ~ x, correlation=corBrownian(phy = tree$scenario.3), method="ML")
   pairwise$y.name[i] <- names(traits_datonly)[ pairwise[i,"y"] ]
   pairwise$x.name[i] <- names(traits_datonly)[ pairwise[i,"x"] ]
   pairwise$coef[i] <- coef(mod)["x"]
