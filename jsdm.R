@@ -81,9 +81,9 @@ for(i in 1:8){
         }
     }
     if(i %in% c(1,3,5,7)) axis(side = 2, at = 1:nd, labels = names(traits_sp)[25:33], las = 1, cex.axis = 1.5)
-    mtext(side = 3, adj = 0, cex = 1.15, text = title[i], line = 1.5)
+    mtext(side = 3, adj = 0, cex = 1.15, text = title[i], line = 0.5)
 }
-legend('topright', bg = "white", pch = 16, col = cols, pt.cex = 2, legend = c(
+legend('bottomleft', bg = "white", pch = 16, col = cols, pt.cex = 2, legend = c(
     "No phylogenetic structure",
     "Exponential",
     "Squared exponential",
