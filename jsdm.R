@@ -1,3 +1,98 @@
+#########################
+#     Trait-Demog       #
+# JSDMs with Phylo Dist #
+#########################
+
+### Boral (cannot do model selection) ###
+
+library(boral)
+
+pd_mat <- cophenetic(tree$scenario.3)
+
+# compare lv correlation structures
+
+null <- boral(y = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), X = cbind(tPC1, tPC2, tPC3, tPC4, tPC5, tPC6, tPC7, tPC8), 
+              family = "normal", calc.ics = T, 
+              mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+              lv.control = list(num.lv = 2, type = "independent", distmat = NULL)
+)
+
+phylo.exp <- boral(y = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), X = cbind(tPC1, tPC2, tPC3, tPC4, tPC5, tPC6, tPC7, tPC8),
+                   family = "normal", calc.ics = T,
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "exponential", distmat = pd_mat)
+)
+
+phylo.sqexp <- boral(y = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), X = cbind(tPC1, tPC2, tPC3, tPC4, tPC5, tPC6, tPC7, tPC8), 
+                     family = "normal", 
+                     mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                     lv.control = list(num.lv = 2, type = "squared.exponential", distmat = pd_mat)
+)
+
+phylo.powexp <- boral(y = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), X = cbind(tPC1, tPC2, tPC3, tPC4, tPC5, tPC6, tPC7, tPC8), 
+                      family = "normal", 
+                      mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                      lv.control = list(num.lv = 2, type = "powered.exponential", distmat = pd_mat)
+)
+
+phylo.spher <- boral(y = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), X = cbind(tPC1, tPC2, tPC3, tPC4, tPC5, tPC6, tPC7, tPC8), 
+                     family = "normal", 
+                     mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                     lv.control = list(num.lv = 2, type = "spherical", distmat = pd_mat)
+)
+
+
+offset <- c(-0.3, -0.15, 0, 0.15, 0.3)
+library(viridis)
+cols <- viridis(5)
+colt <- adjustcolor(cols, alpha.f = 0.25)
+nt <- 8
+title <- c(" a) Trait PC1",
+           " b) Trait PC2",
+           " c) Trait PC3",
+           " d) Trait PC4",
+           " e) Trait PC5",
+           " f) Trait PC6",
+           " g) Trait PC7",
+           " h) Trait PC8")
+
+#pdf("D:/Dropbox/Functional Traits Project/Figures/Boral coef plot Dec21.pdf", height = 12, width = 10)
+par(mfrow=c(4,2), mar=c(4,4,2,2), oma=c(1,7,1,1))
+for(i in 1:8){
+    plot(x = 1:4, y = 1:4, type = "n", cex.axis = 1.5,
+         xlim = c(-2,2), ylim = c(0.5,4.5), xlab = "", yaxt = "n", ylab = "")
+    abline(v = 0, lty = 2)
+    for(j in 1:5){
+        if(j==1) mod <- null
+        if(j==2) mod <- phylo.exp
+        if(j==3) mod <- phylo.sqexp
+        if(j==4) mod <- phylo.powexp
+        if(j==5) mod <- phylo.spher
+        colsig <- rep(colt[j], 4)
+        sig.index <- which(mod$hpdintervals$X.coefs[,i,"lower"] > 0 | mod$hpdintervals$X.coefs[,i,"upper"] < 0)
+        colsig[sig.index] <- cols[j]
+        ##colsig <- which(sig==1)
+        points(c(1:4) + offset[j] ~ mod$X.coefs.median[,i], pch = 16, cex = 2, col = colsig)
+        
+        for(k in 1:4){
+            arrows(mod$hpdintervals$X.coefs[k,i,"lower"], k + offset[j], mod$hpdintervals$X.coefs[k,i,"upper"], k + offset[j], 
+                   length = 0, col = colsig[k])
+        }
+    }
+    if(i %in% c(1,3,5,7)) axis(side = 2, at = 1:4, labels = c("Demog PC1", "Demog PC2", "Demog PC3", "SSI"), las = 1, cex.axis = 1.5)
+    mtext(side = 3, adj = 0, cex = 1.5, text = title[i])
+}
+legend('topright', bty = "n", pch = 16, col = cols, pt.cex = 2, legend = c(
+    "No phylogenetic structure",
+    "Exponential",
+    "Squared exponential",
+    "Powered exponential",
+    "Spherical")
+)
+mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
+dev.off()
+
+
 ####################
 # Trait-Swamp JSDM #
 ####################
@@ -97,108 +192,6 @@ which.min(
                jsdm.trpc.1.8
     ))
 AIC(jsdm.null, jsdm.trpc)
-
-
-#########################
-# JSDMs with Phylo Dist #
-#########################
-
-traits_datonly <- apply(traits_datonly, 2, scale)
-
-### HMSC (can do model selection) ###
-library(Hmsc)
-
-
-
-### Boral (cannot do model selection) ###
-
-library(boral)
-
-pd_mat <- cophenetic(tree)
-
-# compare lv correlation structures
-
-null <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-              family = "normal", calc.ics = T, 
-              mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-              lv.control = list(num.lv = 2, type = "independent", distmat = NULL)
-)
-
-phylo.exp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                   family = "normal", calc.ics = T,
-                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                   lv.control = list(num.lv = 2, type = "exponential", distmat = pd_mat)
-)
-
-phylo.sqexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                     family = "normal", 
-                     mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                     lv.control = list(num.lv = 2, type = "squared.exponential", distmat = pd_mat)
-)
-
-phylo.powexp <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                      family = "normal", 
-                      mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                      lv.control = list(num.lv = 2, type = "powered.exponential", distmat = pd_mat)
-)
-
-phylo.spher <- boral(y = traits_datonly, X = cbind(demog.PC1, demog.PC2, demog.PC3, traits_sp$SSI), 
-                     family = "normal", 
-                     mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
-                     lv.control = list(num.lv = 2, type = "spherical", distmat = pd_mat)
-)
-
-
-offset <- c(-0.3, -0.15, 0, 0.15, 0.3)
-library(viridis)
-cols <- viridis(5)
-colt <- adjustcolor(cols, alpha.f = 0.25)
-nt <- ncol(traits_datonly)
-
-pdf("D:/Dropbox/Functional Traits Project/Figures/HMSC coef plot Sep21.pdf", height = 9, width = 16)
-par(mfrow=c(2,2), mar=c(4,4,2,2), oma=c(1,7,1,1))
-for(i in 1:4){
-    plot(x = 1:nt, y = 1:nt, type = "n",
-         xlim = c(-4,4), xlab = "", yaxt = "n", ylab = "")
-    abline(v = 0, lty = 2)
-    for(j in 1:5){
-        if(j==1) mod <- null
-        if(j==2) mod <- phylo.exp
-        if(j==3) mod <- phylo.sqexp
-        if(j==4) mod <- phylo.powexp
-        if(j==5) mod <- phylo.spher
-        colsig <- rep(colt[j], nt)
-        sig.index <- which(mod$hpdintervals$X.coefs[,i,"lower"] > 0 | mod$hpdintervals$X.coefs[,i,"upper"] < 0)
-        colsig[sig.index] <- cols[j]
-        ##colsig <- which(sig==1)
-        points(c(1:nt) + offset[j] ~ mod$X.coefs.median[,i], pch = 16, cex = 2, col = colsig)
-        for(k in 1:nt){
-            arrows(mod$hpdintervals$X.coefs[k,i,"lower"], k + offset[j], mod$hpdintervals$X.coefs[k,i,"upper"], k + offset[j], 
-                   length = 0, col = colsig[k])
-        }
-    }
-    if(i==1){
-        mtext(side=3, text = "a) Demographic PC1", cex = 1.5, adj = 0)
-        axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
-    }
-    if(i==2) mtext(side=3, text = "b) Demographic PC2", cex = 1.5, adj = 0)
-    if(i==3){
-        mtext(side=3, text = "c) Demographic PC3", cex = 1.5, adj = 0)
-        axis(side=2, at = 1:nt, labels = colnames(traits_datonly), las = 1)
-    }
-    if(i==4) mtext(side=3, text = "d) SSI", cex = 1.5, adj = 0)
-}
-legend('bottomright', bty = "n", pch = 16, col = rev(cols), pt.cex = 2, legend = rev(c(
-    "No phylogenetic structure",
-    "Exponential",
-    "Squared exponential",
-    "Powered exponential",
-    "Spherical"))
-)
-mtext(side = 2, outer = T, "Trait", line = 4, cex = 1.5)
-mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
-
-
 
 
 
