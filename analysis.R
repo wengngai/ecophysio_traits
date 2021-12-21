@@ -178,7 +178,6 @@ biplot(PCA.demog, choices=c(3,4))
 summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
                         correlation=corBrownian(phy = tree$scenario.3), method="ML"))
 (dr.dPC4 <- dredge(max.dPC4, extra = "R^2"))
-# trait PC2
 
 ### SSI
 summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
@@ -215,6 +214,38 @@ AICtable <- rbind(
   data.frame(dr.dPC3[dr.dPC3$delta < 2,]),
   rep(NA, length(dr.dPC1)),
   data.frame(dr.ssi[dr.ssi$delta < 2,]))
+
+# Calculate R2
+library(rr2)
+# First create null models
+m0.dPC1 <- gls(demog.PC1 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.dPC2 <- gls(demog.PC2 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.dPC3 <- gls(demog.PC3 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.ssi <- gls(SSI ~ 1, correlation=corBrownian(phy = tree$scenario.3), data = traits_sp, method="ML")
+
+# demog PC1
+n1 <- nrow(dr.dPC1[dr.dPC1$delta < 2,])
+for(i in 1:n1){
+  mod <- get.models(dr.dPC1, subset = i)[[1]]
+  AICtable$R.2[i+1] <- R2.lik(mod, m0.dPC1)
+}
+# demog PC2
+n2 <- nrow(dr.dPC2[dr.dPC2$delta < 2,])
+for(i in 1:n2){
+  mod <- get.models(dr.dPC2, subset = i)[[1]]
+  AICtable$R.2[i+n1+2] <- R2.lik(mod, m0.dPC2)
+}
+# demog PC3
+n3 <- nrow(dr.dPC3[dr.dPC3$delta < 2,])
+for(i in 1:n3){
+  mod <- get.models(dr.dPC3, subset = i)[[1]]
+  AICtable$R.2[i+n1+n2+3] <- R2.lik(mod, m0.dPC3)
+}
+
+# SSI
+AICtable$R.2[16] <- R2.lik(best.dssi, m0.ssi)
+
+AICtable
 
 #write.csv(AICtable, "D:\\Dropbox\\Functional Traits Project\\Figures\\AIC table.csv")
 
