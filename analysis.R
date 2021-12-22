@@ -114,142 +114,46 @@ PCA.all <- rda(traits_sp[2:33], scale=T)
 biplot(PCA.all, choices = c(1,2), display = "species")
 summary(PCA.all)$cont
 
-#########################
-# TRAIT-LIFE HISTORY &  #
-#  TRAIT-ENV ANALYSIS   #
-#########################
+######################
+# PGLS: SSI ~ traits #
+######################
 
 library(MuMIn)
 library(nlme)
 library(ape)
 
-### demog.PC1
-summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
-#summary(lm.dPC1 <- lm(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
-head(dr.dPC1 <- dredge(max.dPC1, extra = "R^2", m.lim = c(0,4)))
-#(dr.dPC1.lm <- dredge(lm.dPC1, extra = "R^2", m.lim = c(0,4)))
-summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+logit <- function(x){
+  x[which(x>0.99)] <- 0.99
+  x[which(x<0.01)] <- 0.01
+  return(log(x/(1-x)))
+}
+hist(logit(traits_sp$SSI),breaks=10)
+traits_sp$logitSSI <- logit(traits_sp$SSI)
 
-# higher demog.PC1 (growth rate) driven by higher tPC4 (resource acquisitive)
-plot(demog.PC1 ~ tPC4, type = "n"); text(demog.PC1 ~ tPC4, labels = names(tPC4))
-
-# higher demog.PC1 (growth rate)  driven by higher tPC2 (greater hydraulic investment)
-plot(demog.PC1 ~ tPC2, type = "n"); text(demog.PC1 ~ tPC2, labels = names(tPC2))
-
-#pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
-biplot(PCA.traits, choices=c(4,2), display = "species") 
-dev.off()
-
-### demog.PC2
-summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
-#summary(lm.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
-head(dr.dPC2 <- dredge(max.dPC2, extra = "R^2", m.lim = c(0,4)))
-#(dr.dPC2.lm <- dredge(lm.dPC2, extra = "R^2", m.lim = c(0,4)))
-summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
-# higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in water transport. but correlations weak
-plot(demog.PC2 ~ tPC6, type = "n"); text(demog.PC2 ~ tPC6, labels = names(tPC6))
-plot(demog.PC2 ~ tPC7, type = "n"); text(demog.PC2 ~ tPC7, labels = names(tPC7))
-
-biplot(PCA.traits, choices=c(6,7), display = "species") 
-
-### demog.PC3
-summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            correlation=corBrownian(phy = tree$scenario.3), method="ML"))
-head(dr.dPC3 <- dredge(max.dPC3, extra = "R^2", m.lim = c(0,4)))
-summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
-# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
-plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC1))
-# higher demog.PC3 (recruitment, survival) driven by lower tPC2 (lesser hydraulic investment)
-plot(demog.PC3 ~ tPC2, type = "n"); text(demog.PC3 ~ tPC2, labels = names(tPC2))
-# higher demog.PC3 (recruitment, survival) driven by higher tPC4 (more acquisitive leaf resource acquisition strategy)
-plot(demog.PC3 ~ tPC4, type = "n"); text(demog.PC3 ~ tPC4, labels = names(tPC4))
-# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC3 
-# (thicker, more sclerophyllous leaves with lower palisade meso and LDMC) but this trait only found in top model
-plot(demog.PC3 ~ tPC3, type = "n"); text(demog.PC3 ~ tPC3, labels = names(tPC3))
-
-biplot(PCA.traits, choices=c(1,2), display = "species")
-biplot(PCA.traits, choices=c(3,4), display = "species")
-
-biplot(PCA.demog, choices=c(3,4))
-
-### demog.PC4
-summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
-(dr.dPC4 <- dredge(max.dPC4, extra = "R^2"))
-
-### SSI
-summary(max.ssi <- gls(model = SSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
-            data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+summary(max.ssi <- gls(model = logitSSI ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                       data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
 head(dr.ssi <- dredge(max.ssi, extra = "R^2"))
+dr.ssi[which(dr.ssi$df==2),]
 summary(best.dssi <- get.models(dr.ssi, subset=1)[[1]])
 
-#pdf("./outputs/traits PCA 4-7.pdf", width=5, height=5)
 biplot(PCA.traits, choices=c(6,3), display = "species") 
-dev.off()
-
-# swamp adaptation weakly driven by lower PC4 (more conservative leaf resource acquisition strategy)
-plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
-# swamp adaptation enabled by leaf sclerophylly (lower PC3)
-plot(traits_sp$SSI ~ tPC3, type="n"); text(traits_sp$SSI ~ tPC3, labels=traits_sp$Species)
-# swamp adaptation driven by higher vein densities with less occlusion (lower PC6)
-plot(traits_sp$SSI ~ tPC6, type="n"); text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species)
-
-# are demog.PCs and SSI correlated?
-summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4,
-                       data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
-(dr.ssi.demo <- dredge(ssi.mod))
-summary(get.models(dr.ssi.demo, subset = 1)[[1]])
-# swamp species tend to be more large statured, long-lived species (maybe just the result of plot selection)
-plot(traits_sp$SSI ~ demog.PC2, type="n"); text(traits_sp$SSI ~ demog.PC2, labels=traits_sp$Species)
-
-# AIC table
-AICtable <- rbind(
-  rep(NA, length(dr.dPC1)),
-  data.frame(dr.dPC1[dr.dPC1$delta < 2,]),
-  rep(NA, length(dr.dPC1)),
-  data.frame(dr.dPC2[dr.dPC2$delta < 2,]),
-  rep(NA, length(dr.dPC1)),
-  data.frame(dr.dPC3[dr.dPC3$delta < 2,]),
-  rep(NA, length(dr.dPC1)),
-  data.frame(dr.ssi[dr.ssi$delta < 2,]))
 
 # Calculate R2
 library(rr2)
 # First create null models
-m0.dPC1 <- gls(demog.PC1 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
-m0.dPC2 <- gls(demog.PC2 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
-m0.dPC3 <- gls(demog.PC3 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
-m0.ssi <- gls(SSI ~ 1, correlation=corBrownian(phy = tree$scenario.3), data = traits_sp, method="ML")
+m0.ssi <- gls(logitSSI ~ 1, correlation=corBrownian(phy = tree$scenario.3), data = traits_sp, method="ML")
+R2.lik(get.models(dr.ssi, subset=2)[[1]], m0.ssi)
+R2.lik(get.models(dr.ssi, subset=3)[[1]], m0.ssi)
+AICc(m0.ssi)
 
-# demog PC1
-n1 <- nrow(dr.dPC1[dr.dPC1$delta < 2,])
-for(i in 1:n1){
-  mod <- get.models(dr.dPC1, subset = i)[[1]]
-  AICtable$R.2[i+1] <- R2.lik(mod, m0.dPC1)
-}
-# demog PC2
-n2 <- nrow(dr.dPC2[dr.dPC2$delta < 2,])
-for(i in 1:n2){
-  mod <- get.models(dr.dPC2, subset = i)[[1]]
-  AICtable$R.2[i+n1+2] <- R2.lik(mod, m0.dPC2)
-}
-# demog PC3
-n3 <- nrow(dr.dPC3[dr.dPC3$delta < 2,])
-for(i in 1:n3){
-  mod <- get.models(dr.dPC3, subset = i)[[1]]
-  AICtable$R.2[i+n1+n2+3] <- R2.lik(mod, m0.dPC3)
-}
+# AIC table
+(AICtable <- data.frame(dr.ssi[dr.ssi$delta <= 2,]))
+AICtable$R.2[1] <- R2.lik(best.dssi, m0.ssi) #R2 = 60.6%
+AICtable$R.2[2] <- R2.lik(get.models(dr.ssi, subset=2)[[1]], m0.ssi)
+AICtable$R.2[3] <- R2.lik(get.models(dr.ssi, subset=3)[[1]], m0.ssi)
 
-# SSI
-AICtable$R.2[16] <- R2.lik(best.dssi, m0.ssi)
-
-AICtable
-
-#write.csv(AICtable, "D:\\Dropbox\\Functional Traits Project\\Figures\\AIC table.csv")
-
-
+#write.csv(AICtable, "D:\\Dropbox\\Functional Traits Project\\Figures\\AIC table SSI only.csv")
+  
 ############################
 # TRAIT-TRAIT CORRELATIONS #
 ############################
@@ -332,6 +236,56 @@ circos.clear()
 # VISUALIZATION #
 #################
 
+### SSI correlations with trait PCs 1, 3, 6
+summary(best.dssi)
+inv.logit <- function(y) exp(y) / (1 + exp(y))
+
+# predictions
+newtPC1 <- seq(-0.35, 0.4, 0.01)
+dpred1 <- predict(best.dssi, newdata = data.frame(tPC1 = newtPC1, tPC3 = 0, tPC6 = 0), se.fit = T)
+newtPC3 <- seq(-0.5, 0.5, 0.01)
+dpred3 <- predict(best.dssi, newdata = data.frame(tPC3 = newtPC3, tPC1 = 0, tPC6 = 0), se.fit = T)
+newtPC6 <- seq(-0.3, 0.6, 0.01)
+dpred6 <- predict(best.dssi, newdata = data.frame(tPC6 = newtPC6, tPC1 = 0, tPC3 = 0), se.fit = T)
+
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI correlations.pdf", height=10, width=4)
+par(mfrow = c(3, 1), mar = c(6,7,1,2), mgp = c(4,1,0))
+# a) PC1
+plot(traits_sp$SSI ~ tPC1, type="n", xlim = c(-0.35, 0.4),
+     ylab = "", xlab = "Trait PC1\n(Spongy mesophyll dimension)",
+     cex.lab = 1.4)
+polygon(with(dpred1, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#66D7D16e")
+lines(inv.logit(dpred1$fit) ~ newtPC1, lwd = 4, col = "white")
+text(traits_sp$SSI ~ tPC1, labels=traits_sp$Species, 
+     cex = ifelse(traits_sp$Species %in% c("LMU", "TWA"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("LMU", "TWA"), "black", "grey60"))
+mtext(side = 3, text = " a)", cex = 1.2, line = -1.5, adj = 0)
+
+# b) PC3
+plot(traits_sp$SSI ~ tPC3, type="n", xlim = c(-0.5, 0.5),
+     ylab = "", xlab = "Trait PC3\n(Sclerophylly-hydraulic efficiency dimension)",
+     cex.lab = 1.4)
+polygon(with(dpred3, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newtPC3,rev(newtPC3)), border = F, col = "#66D7D16e")
+lines(inv.logit(dpred3$fit) ~ newtPC3, lwd = 4, col = "white")
+text(traits_sp$SSI ~ tPC3, labels=traits_sp$Species, 
+     cex = ifelse(traits_sp$Species %in% c("PAX", "ACL"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("PAX", "ACL"), "black", "grey60"))
+mtext(side = 3, text = " b)", cex = 1.2, line = -1.5, adj = 0)
+
+# c) PC6
+plot(traits_sp$SSI ~ tPC6, type="n", xlim = c(-0.3, 0.6),
+     ylab = "", xlab = "Trait PC6\n(Vein density dimension)",
+     cex.lab = 1.4)
+polygon(with(dpred6, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newtPC6,rev(newtPC6)), border = F, col = "#66D7D16e")
+lines(inv.logit(dpred6$fit) ~ newtPC6, lwd = 4, col = "white")
+text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species, 
+     cex = ifelse(traits_sp$Species %in% c("MBE", "PEC"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("MBE", "PEC"), "black", "grey60"))
+mtext(side = 3, text = " c)", cex = 1.2, line = -1.5, adj = 0)
+mtext(side = 2, text = "SSI (Swamp association)", cex = 1.3, outer = T, line = -3)
+
+dev.off()
+
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
 S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
 
@@ -341,7 +295,250 @@ S_parms$sp <- abbrev(rownames(S_parms))
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 
-### PCA plot
+
+
+### Trait PCA biplots
+
+summary(PCA.traits)$cont
+
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.pdf", height=14, width=6)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.jpg", height=14, width=6, units="in", res=300)
+
+# a) PC1 - PC2
+par(mfrow = c(3,1), mar = c(5,5.5,2,2))
+plot(x = PCA.traits$CA$v[,1]*1.25, y = PCA.traits$CA$v[,2]*1.25, type = "n",
+     ylab = "Trait PC2 (19.5% variance explained)", xlab = "Trait PC1 (22.5% variance explained)",
+     cex.lab = 1.5)
+for(i in 1:nrow(PCA.traits$CA$v)){
+  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
+  arrows(0, 0, PCA.traits$CA$v[i,1], PCA.traits$CA$v[i,2], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,1]*1.2, y = PCA.traits$CA$v[i,2]*1.2, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
+}
+mtext(text = " a)", side = 3, adj = 0, cex = 1.5, line = -2)
+
+# b) PC3 - PC4
+plot(x = PCA.traits$CA$v[,3]*1.25, y = PCA.traits$CA$v[,4]*1.25, type = "n",
+     ylab = "Trait PC4 (9.9% variance explained)", xlab = "Trait PC3 (13.3% variance explained)",
+     cex.lab = 1.5)
+for(i in 1:nrow(PCA.traits$CA$v)){
+  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
+  arrows(0, 0, PCA.traits$CA$v[i,3], PCA.traits$CA$v[i,4], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,3]*1.2, y = PCA.traits$CA$v[i,4]*1.2, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
+}
+mtext(text = " b)", side = 3, adj = 0, cex = 1.5, line = -2)
+
+# c) PC6 - PC4
+plot(x = PCA.traits$CA$v[,6]*1.25, y = PCA.traits$CA$v[,4]*1.25, type = "n",
+     ylab = "Trait PC4 (9.9% variance explained)", xlab = "Trait PC6 (5.5% variance explained)",
+     cex.lab = 1.5)
+for(i in 1:nrow(PCA.traits$CA$v)){
+  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
+  arrows(0, 0, PCA.traits$CA$v[i,6], PCA.traits$CA$v[i,4], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,6]*1.2, y = PCA.traits$CA$v[i,4]*1.2, lwd = 2, col = arrowcol, 
+       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
+}
+mtext(text = " c)", side = 3, adj = 0, cex = 1.5, line = -2)
+
+legend('bottomright', legend = c("Leaf traits", "Wood traits"), lwd = 2, col = c("#403D58", "#DBD56E"), bty = "n")
+
+dev.off()
+
+### Trait-Demog correlations
+
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait-demog correlations.pdf", height=10, width=5)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait-demog correlations.jpg", height=10, width=5, units="in", res=900)
+layout(matrix(c(1,2,4,1,3,4), ncol = 2))
+par(mar = c(6,7,2,2), mgp = c(4,1,0))
+# a) higher demog.PC1 (growth rate)  driven by lower tPC2 (greater hydraulic investment)
+newtPC2 <- seq(min(tPC2), max(tPC2), 0.01)
+apred <- predict(best.dPC1, newdata = data.frame(tPC2 = newtPC2, tPC4 = 0), se.fit = T)
+plot(demog.PC1 ~ tPC2, type = "n", las = 1,
+     ylab = "Demographic PC1\n(fast-slow growth dimension)",
+     xlab = "Trait PC2\n(Hydraulic investment dimension)",
+     cex.lab = 1.4)
+polygon(with(apred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC2,rev(newtPC2)), border = F, col = "#F7B39F6e")
+lines(apred$fit ~ newtPC2, lwd = 4, col = "white")
+text(demog.PC1 ~ tPC2, labels = names(tPC2), 
+     cex = ifelse(traits_sp$Species %in% c("RCI", "GNE"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("RCI", "GNE"), "black", "grey60"))
+mtext(side = 3, text = " a)", cex = 1.2, line = -1.5, adj = 0)
+
+# b) higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in spongy mesophyl (tPC1)
+newtPC1 <- seq(min(tPC1), max(tPC1), 0.01)
+bpred <- predict(best.dPC2, newdata = data.frame(tPC1 = newtPC1, tPC4 = 0), se.fit = T)
+plot(demog.PC2 ~ tPC1, type = "n", las = 1, xlim = c(-0.45,0.35),
+     xlab = "",
+     ylab = "Demographic PC2\n(small-large stature dimension)",
+     cex.lab = 1.4)
+polygon(with(bpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#F7B39F6e")
+lines(bpred$fit ~ newtPC1, lwd = 4, col = "white")
+text(demog.PC2 ~ tPC1, labels = names(tPC1), 
+     cex = ifelse(traits_sp$Species %in% c("SCE", "MGI"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("SCE", "MGI"), "black", "grey60"))
+mtext(side = 3, text = " b)", cex = 1.2, line = -1.5, adj = 0)
+
+# c) higher demog.PC3 (recruitment, survival) weakly driven by higher tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
+newtPC1 <- seq(min(tPC1), max(tPC1), 0.01)
+cpred <- predict(best.dPC3, newdata = data.frame(tPC1 = newtPC1, tPC2 = 0, tPC4 = 0, tPC6 = 0), se.fit = T)
+plot(demog.PC3 ~ tPC1, type = "n", xlim = c(-0.45,0.35),
+     xlab = "",
+     ylab = "Demographic PC3\n(recruitment/survival-growth  dimension)",
+     cex.lab = 1.4)
+polygon(with(cpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#F7B39F6e")
+lines(cpred$fit ~ newtPC1, lwd = 4, col = "white")
+text(demog.PC3 ~ tPC1, labels = names(tPC1), 
+     cex = ifelse(traits_sp$Species %in% c("SCE", "MGI"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("SCE", "MGI"), "black", "grey60"))
+mtext(side = 3, text = " c)", cex = 1.2, line = -1.5, adj = 0)
+
+mtext(side = 1, outer = T, line = -27, text ="Trait PC1\n(Spongy mesophyll dimension)", adj = 0.6)
+
+# d) swamp adaptation driven by higher vein densities with less occlusion (higher PC6)
+newtPC6 <- seq(min(tPC6), max(tPC6), 0.01)
+dpred <- predict(best.dssi, newdata = data.frame(tPC6 = newtPC6, tPC4 = 0, tPC5 = 0), se.fit = T)
+plot(traits_sp$SSI ~ tPC6, type="n",
+     ylab = "SSI\n(Swamp association)",
+     xlab = "Trait PC6\n(Vein density dimension)",
+     cex.lab = 1.4)
+polygon(with(dpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC6,rev(newtPC6)), border = F, col = "#66D7D16e")
+lines(dpred$fit ~ newtPC6, lwd = 4, col = "white")
+text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species, 
+     cex = ifelse(traits_sp$Species %in% c("MBE", "PEC"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("MBE", "PEC"), "black", "grey60"))
+mtext(side = 3, text = " d)", cex = 1.2, line = -1.5, adj = 0)
+
+dev.off()
+
+
+#########################
+#      OBSOLETIZED:     #
+# PGLS FOR DEMOG TRAITS #
+#########################
+
+library(MuMIn)
+library(nlme)
+library(ape)
+
+### demog.PC1
+summary(max.dPC1 <- gls(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+#summary(lm.dPC1 <- lm(demog.PC1 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
+head(dr.dPC1 <- dredge(max.dPC1, extra = "R^2", m.lim = c(0,4)))
+#(dr.dPC1.lm <- dredge(lm.dPC1, extra = "R^2", m.lim = c(0,4)))
+summary(best.dPC1 <- get.models(dr.dPC1, subset=1)[[1]])
+
+# higher demog.PC1 (growth rate) driven by higher tPC4 (resource acquisitive)
+plot(demog.PC1 ~ tPC4, type = "n"); text(demog.PC1 ~ tPC4, labels = names(tPC4))
+
+# higher demog.PC1 (growth rate)  driven by higher tPC2 (greater hydraulic investment)
+plot(demog.PC1 ~ tPC2, type = "n"); text(demog.PC1 ~ tPC2, labels = names(tPC2))
+
+#pdf("./outputs/traits PCA2-4.pdf", width=5, height=5)
+biplot(PCA.traits, choices=c(4,2), display = "species") 
+dev.off()
+
+### demog.PC2
+summary(max.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+#summary(lm.dPC2 <- gls(demog.PC2 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, na.action = na.fail))
+head(dr.dPC2 <- dredge(max.dPC2, extra = "R^2", m.lim = c(0,4)))
+#(dr.dPC2.lm <- dredge(lm.dPC2, extra = "R^2", m.lim = c(0,4)))
+summary(best.dPC2 <- get.models(dr.dPC2, subset=1)[[1]])
+# higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in water transport. but correlations weak
+plot(demog.PC2 ~ tPC6, type = "n"); text(demog.PC2 ~ tPC6, labels = names(tPC6))
+plot(demog.PC2 ~ tPC7, type = "n"); text(demog.PC2 ~ tPC7, labels = names(tPC7))
+
+biplot(PCA.traits, choices=c(6,7), display = "species") 
+
+### demog.PC3
+summary(max.dPC3 <- gls(demog.PC3 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+head(dr.dPC3 <- dredge(max.dPC3, extra = "R^2", m.lim = c(0,4)))
+summary(best.dPC3 <- get.models(dr.dPC3, subset=1)[[1]])
+# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
+plot(demog.PC3 ~ tPC1, type = "n"); text(demog.PC3 ~ tPC1, labels = names(tPC1))
+# higher demog.PC3 (recruitment, survival) driven by lower tPC2 (lesser hydraulic investment)
+plot(demog.PC3 ~ tPC2, type = "n"); text(demog.PC3 ~ tPC2, labels = names(tPC2))
+# higher demog.PC3 (recruitment, survival) driven by higher tPC4 (more acquisitive leaf resource acquisition strategy)
+plot(demog.PC3 ~ tPC4, type = "n"); text(demog.PC3 ~ tPC4, labels = names(tPC4))
+# higher demog.PC3 (recruitment, survival) weakly driven by lower tPC3 
+# (thicker, more sclerophyllous leaves with lower palisade meso and LDMC) but this trait only found in top model
+plot(demog.PC3 ~ tPC3, type = "n"); text(demog.PC3 ~ tPC3, labels = names(tPC3))
+
+biplot(PCA.traits, choices=c(1,2), display = "species")
+biplot(PCA.traits, choices=c(3,4), display = "species")
+
+biplot(PCA.demog, choices=c(3,4))
+
+### demog.PC4
+summary(max.dPC4 <- gls(demog.PC4 ~ tPC1 + tPC2 + tPC3 + tPC4 + tPC5 + tPC6 + tPC7 + tPC8, 
+                        correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+(dr.dPC4 <- dredge(max.dPC4, extra = "R^2"))
+
+# swamp adaptation weakly driven by lower PC4 (more conservative leaf resource acquisition strategy)
+plot(traits_sp$SSI ~ tPC4, type="n"); text(traits_sp$SSI ~ tPC4, labels=traits_sp$Species)
+# swamp adaptation enabled by leaf sclerophylly (lower PC3)
+plot(traits_sp$SSI ~ tPC3, type="n"); text(traits_sp$SSI ~ tPC3, labels=traits_sp$Species)
+# swamp adaptation driven by higher vein densities with less occlusion (lower PC6)
+plot(traits_sp$SSI ~ tPC6, type="n"); text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species)
+
+# are demog.PCs and SSI correlated?
+summary(ssi.mod <- gls(model = SSI ~ demog.PC1 + demog.PC2 + demog.PC3 + demog.PC4,
+                       data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
+(dr.ssi.demo <- dredge(ssi.mod))
+summary(get.models(dr.ssi.demo, subset = 1)[[1]])
+# swamp species tend to be more large statured, long-lived species (maybe just the result of plot selection)
+plot(traits_sp$SSI ~ demog.PC2, type="n"); text(traits_sp$SSI ~ demog.PC2, labels=traits_sp$Species)
+
+# AIC table
+AICtable <- rbind(
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC1[dr.dPC1$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC2[dr.dPC2$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.dPC3[dr.dPC3$delta < 2,]),
+  rep(NA, length(dr.dPC1)),
+  data.frame(dr.ssi[dr.ssi$delta < 2,]))
+
+# Calculate R2
+library(rr2)
+# First create null models
+m0.dPC1 <- gls(demog.PC1 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.dPC2 <- gls(demog.PC2 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.dPC3 <- gls(demog.PC3 ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
+m0.ssi <- gls(SSI ~ 1, correlation=corBrownian(phy = tree$scenario.3), data = traits_sp, method="ML")
+
+# demog PC1
+n1 <- nrow(dr.dPC1[dr.dPC1$delta < 2,])
+for(i in 1:n1){
+  mod <- get.models(dr.dPC1, subset = i)[[1]]
+  AICtable$R.2[i+1] <- R2.lik(mod, m0.dPC1)
+}
+# demog PC2
+n2 <- nrow(dr.dPC2[dr.dPC2$delta < 2,])
+for(i in 1:n2){
+  mod <- get.models(dr.dPC2, subset = i)[[1]]
+  AICtable$R.2[i+n1+2] <- R2.lik(mod, m0.dPC2)
+}
+# demog PC3
+n3 <- nrow(dr.dPC3[dr.dPC3$delta < 2,])
+for(i in 1:n3){
+  mod <- get.models(dr.dPC3, subset = i)[[1]]
+  AICtable$R.2[i+n1+n2+3] <- R2.lik(mod, m0.dPC3)
+}
+
+# SSI
+AICtable$R.2[16] <- R2.lik(best.dssi, m0.ssi)
+
+AICtable
+
+#write.csv(AICtable, "D:\\Dropbox\\Functional Traits Project\\Figures\\AIC table.csv")
+
+### OBSOLETIZED: 
+### Demographic PCA plot ###
 
 # assign colors
 col.hi1 <- "#66D7D1"
@@ -372,12 +569,12 @@ text(demog.PC2 ~ demog.PC1, labels = traits_sp$Species,
                          ifelse(traits_sp$Species %in% c("PPO", "GNE"), col.hi1,
                                 ifelse(traits_sp$Species %in% c("RCI", "AAN"), col.lo1, "grey")))),
      cex = ifelse(traits_sp$Species %in% c("LMU", "ASY", "SCE", "EMA", "PPO", "GNE", "RCI", "AAN"), 1.2, 0.7)
-     )
+)
 legend("bottomleft", bty = "n", lwd = 2, col=c("#403D58","#8E8963", "#DBD56E"),
        legend = c("Growth model parameters: a, b, c (panels c & h)", 
                   "Survival model parameters: K, r, p (panels d, f & i)", 
                   "Other parameters: Hmax (panel e), rec (panel g)")
-       )
+)
 mtext(side = 3, line = -1.3, text = " a)", adj = 0)
 
 # b) PCA of PC3 ~ PC1
@@ -490,105 +687,3 @@ legend('bottomright', bty = "n", legend = c("High PC3: AFR, GAX", "Low PC3: ACL,
 
 dev.off()
 
-
-### Trait PCA biplots
-
-summary(PCA.traits)$cont
-
-#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.pdf", height=10, width=7)
-#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.jpg", height=10, width=7, units="in", res=300)
-
-# a) PC1 - PC2
-par(mfrow = c(2,1), mar = c(5,5.5,2,2))
-plot(x = PCA.traits$CA$v[,1]*1.25, y = PCA.traits$CA$v[,2]*1.25, type = "n",
-     ylab = "Trait PC2 (19.5% variance explained)", xlab = "Trait PC1 (22.5% variance explained)",
-     cex.lab = 1.5)
-for(i in 1:nrow(PCA.traits$CA$v)){
-  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
-  arrows(0, 0, PCA.traits$CA$v[i,1], PCA.traits$CA$v[i,2], lwd = 2, col = arrowcol)
-  text(x = PCA.traits$CA$v[i,1]*1.2, y = PCA.traits$CA$v[i,2]*1.2, lwd = 2, col = arrowcol, 
-       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
-}
-mtext(text = " a)", side = 3, adj = 0, cex = 1.5, line = -1.5)
-
-# b) PC4 - PC6
-plot(x = PCA.traits$CA$v[,4]*1.25, y = PCA.traits$CA$v[,6]*1.25, type = "n",
-     ylab = "Trait PC6 (7.9% variance explained)", xlab = "Trait PC4 (9.9% variance explained)",
-     cex.lab = 1.5)
-for(i in 1:nrow(PCA.traits$CA$v)){
-  arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
-  arrows(0, 0, PCA.traits$CA$v[i,4], PCA.traits$CA$v[i,6], lwd = 2, col = arrowcol)
-  text(x = PCA.traits$CA$v[i,4]*1.2, y = PCA.traits$CA$v[i,6]*1.2, lwd = 2, col = arrowcol, 
-       labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
-}
-mtext(text = " b)", side = 3, adj = 0, cex = 1.5, line = -1.5)
-legend('bottomright', legend = c("Leaf traits", "Wood traits"), lwd = 2, col = c("#403D58", "#DBD56E"), bty = "n")
-
-dev.off()
-
-
-### Trait-Demog correlations
-
-#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait-demog correlations.pdf", height=10, width=5)
-#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait-demog correlations.jpg", height=10, width=5, units="in", res=900)
-layout(matrix(c(1,2,4,1,3,4), ncol = 2))
-par(mar = c(6,7,2,2), mgp = c(4,1,0))
-# a) higher demog.PC1 (growth rate)  driven by lower tPC2 (greater hydraulic investment)
-newtPC2 <- seq(min(tPC2), max(tPC2), 0.01)
-apred <- predict(best.dPC1, newdata = data.frame(tPC2 = newtPC2, tPC4 = 0), se.fit = T)
-plot(demog.PC1 ~ tPC2, type = "n", las = 1,
-     ylab = "Demographic PC1\n(fast-slow growth dimension)",
-     xlab = "Trait PC2\n(Hydraulic investment dimension)",
-     cex.lab = 1.4)
-polygon(with(apred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC2,rev(newtPC2)), border = F, col = "#F7B39F6e")
-lines(apred$fit ~ newtPC2, lwd = 4, col = "white")
-text(demog.PC1 ~ tPC2, labels = names(tPC2), 
-     cex = ifelse(traits_sp$Species %in% c("RCI", "GNE"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("RCI", "GNE"), "black", "grey60"))
-mtext(side = 3, text = " a)", cex = 1.2, line = -1.5, adj = 0)
-
-# b) higher demog.PC2 (stature, survivability/longevity) enabled by higher investment in spongy mesophyl (tPC1)
-newtPC1 <- seq(min(tPC1), max(tPC1), 0.01)
-bpred <- predict(best.dPC2, newdata = data.frame(tPC1 = newtPC1, tPC4 = 0), se.fit = T)
-plot(demog.PC2 ~ tPC1, type = "n", las = 1, xlim = c(-0.45,0.35),
-     xlab = "",
-     ylab = "Demographic PC2\n(small-large stature dimension)",
-     cex.lab = 1.4)
-polygon(with(bpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#F7B39F6e")
-lines(bpred$fit ~ newtPC1, lwd = 4, col = "white")
-text(demog.PC2 ~ tPC1, labels = names(tPC1), 
-     cex = ifelse(traits_sp$Species %in% c("SCE", "MGI"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("SCE", "MGI"), "black", "grey60"))
-mtext(side = 3, text = " b)", cex = 1.2, line = -1.5, adj = 0)
-
-# c) higher demog.PC3 (recruitment, survival) weakly driven by higher tPC1 (thinner cuticles/epidermises, thicker spongy mesophylls)
-newtPC1 <- seq(min(tPC1), max(tPC1), 0.01)
-cpred <- predict(best.dPC3, newdata = data.frame(tPC1 = newtPC1, tPC2 = 0, tPC4 = 0, tPC6 = 0), se.fit = T)
-plot(demog.PC3 ~ tPC1, type = "n", xlim = c(-0.45,0.35),
-     xlab = "",
-     ylab = "Demographic PC3\n(recruitment/survival-growth  dimension)",
-     cex.lab = 1.4)
-polygon(with(cpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#F7B39F6e")
-lines(cpred$fit ~ newtPC1, lwd = 4, col = "white")
-text(demog.PC3 ~ tPC1, labels = names(tPC1), 
-     cex = ifelse(traits_sp$Species %in% c("SCE", "MGI"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("SCE", "MGI"), "black", "grey60"))
-mtext(side = 3, text = " c)", cex = 1.2, line = -1.5, adj = 0)
-
-mtext(side = 1, outer = T, line = -27, text ="Trait PC1\n(Spongy mesophyll dimension)", adj = 0.6)
-
-# d) swamp adaptation driven by higher vein densities with less occlusion (higher PC6)
-newtPC6 <- seq(min(tPC6), max(tPC6), 0.01)
-dpred <- predict(best.dssi, newdata = data.frame(tPC6 = newtPC6, tPC4 = 0, tPC5 = 0), se.fit = T)
-plot(traits_sp$SSI ~ tPC6, type="n",
-     ylab = "SSI\n(Swamp association)",
-     xlab = "Trait PC6\n(Vein density dimension)",
-     cex.lab = 1.4)
-polygon(with(dpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newtPC6,rev(newtPC6)), border = F, col = "#66D7D16e")
-lines(dpred$fit ~ newtPC6, lwd = 4, col = "white")
-text(traits_sp$SSI ~ tPC6, labels=traits_sp$Species, 
-     cex = ifelse(traits_sp$Species %in% c("MBE", "PEC"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("MBE", "PEC"), "black", "grey60"))
-mtext(side = 3, text = " d)", cex = 1.2, line = -1.5, adj = 0)
-
-dev.off()
