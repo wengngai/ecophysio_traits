@@ -286,6 +286,8 @@ mtext(side = 2, text = "SSI (Swamp association)", cex = 1.3, outer = T, line = -
 
 dev.off()
 
+### Trait effect on demog 
+# read in again untransformed params
 AG_parms <- read.csv("./raw_data/adult growth mod parms Sep21.csv", row.names=1)
 S_parms <- read.csv("./raw_data/surv mod parms Sep21.csv", row.names=1)
 
@@ -295,7 +297,61 @@ S_parms$sp <- abbrev(rownames(S_parms))
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 
+# assign colors
+col.hi1 <- "#66D7D1"
+col.lo1 <- "#B1A792"
+col.hi2 <- "#538A95"
+col.lo2 <- "#FC7753"
+col.hi3 <- "#403D58"
+col.lo3 <- "#F7B39F"
 
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog effects plots.pdf", height=8, width=8)
+layout(matrix(c(1,2,1,3), ncol = 2))
+par(mar = c(4.5,5.5,1,1))
+
+## Trait PC2 effect on AG
+# ranked: RCI, PEC, PCO (but take AFR instead) are lowest, BPA, HCR, MGI are highest
+#tPC2[order(tPC2)]
+newdbh <- seq(1,50,len=100)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", 
+     ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
+lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
+        newdbh, col = col.lo1, lwd = 3)
+lines(zeide_w_transform(a = AG_parms["Pternandra echinata","a"], b = AG_parms["Pternandra echinata", "b"], c = AG_parms["Pternandra echinata", "c"], dbh = newdbh) ~
+        newdbh, col = col.lo1, lwd = 3)
+lines(zeide_w_transform(a = AG_parms["Horsfieldia crassifolia","a"], b = AG_parms["Horsfieldia crassifolia", "b"], c = AG_parms["Horsfieldia crassifolia", "c"], dbh = newdbh) ~
+        newdbh, col = col.hi1, lwd = 3)
+lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Macaranga gigantea", "b"], c = AG_parms["Macaranga gigantea", "c"], dbh = newdbh) ~
+        newdbh, col = col.hi1, lwd = 3)
+legend('topright', bty = "n", title = "Trait PC2",
+       legend = c("High: HCR, MGI", "Low: RCI, PEC"),
+       lwd = 3, col = c(col.hi1, col.lo1), cex = 1.2)
+
+## Trait PC4 effect on survival
+# ranked: RCI, AAN, PPI are lowest, TWA, AFR (but take XFL isntead), ASY are highest
+plot(traits_sp$rec^2 ~ tPC4, type = "n", ylab = expression(paste("BSR (stems ", year^-1, " ", plot^-1, " ", m^-2, ")")),
+     xlab = "Trait PC4", cex.lab = 1.5, xlim = c(-0.4, 0.6))
+text(traits_sp$rec^2 ~ tPC4, labels = traits_sp$Species, 
+     col = ifelse(traits_sp$Species %in% c("RCI", "AAN"), col.lo2,
+                  ifelse(traits_sp$Species %in% c("ASY", "XFL"), col.hi2, "grey")),
+     cex = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 1.4, 0.8),
+     font = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 2, 1)
+)
+
+newdbh <- seq(0.001, 0.5, len=200)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
+lines(needham_w_transform(K = S_parms["Rhodamnia cinerea","K"], r = S_parms["Rhodamnia cinerea", "r1"], p = S_parms["Rhodamnia cinerea", "p1"], dbh = newdbh) ~
+        newdbh, col = col.lo2, lwd = 3)
+lines(needham_w_transform(K = S_parms["Alstonia angustifolia","K"], r = S_parms["Alstonia angustifolia", "r1"], p = S_parms["Alstonia angustifolia", "p1"], dbh = newdbh) ~
+        newdbh, col = col.lo2, lwd = 3)
+lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
+        newdbh, col = col.hi2, lwd = 3)
+lines(needham_w_transform(K = S_parms["Xanthophyllum flavescens","K"], r = S_parms["Xanthophyllum flavescens", "r1"], p = S_parms["Xanthophyllum flavescens", "p1"], dbh = newdbh) ~
+        newdbh, col = col.hi2, lwd = 3)
+legend('bottomright', bty = "n", title = "Trait PC4",
+       legend = c("High: ASY, XFL", "Low: RCI, AAN"),
+       lwd = 3, col = c(col.hi2, col.lo2), cex = 1.2)
+dev.off()
 
 ### Trait PCA biplots
 
