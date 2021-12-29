@@ -5,6 +5,13 @@
 
 # perform JSDM on demographic parameters (as multivariate data that are internally correlated)
 # run lines 1-110 in Analysis.R first
+sourcePartial <- function(fn, skip=0, n=-1) {
+    lines <- scan(fn, what=character(), sep="\n", skip=skip, n=n, quiet=TRUE)
+    tc <- textConnection(lines)
+    source(tc)
+    close(tc)
+}
+sourcePartial("analysis.R", 0, 110)
 
 library(boral)
 
@@ -133,6 +140,41 @@ for(i in 1:4){
 }
 mtext(side = 1, outer = T, "Effect size", line = -1, cex = 1.5)
 dev.off()
+
+
+# Note to self: species locations look strange. Try a null boral model with NO X variables (TRAIT PCs) then plot lvsplot
+# in this plot, growth-survival tradeoff is evident. maybe without traits that will disappear
+
+phylo.exp.null <- boral(y = apply(traits_sp[,25:32],2,scale),
+                   family = "normal", calc.ics = T, save.model = T,
+                   mcmc.control = list(n.burnin = 10000, n.iteration = 40000, n.thin = 50),
+                   lv.control = list(num.lv = 2, type = "exponential", distmat = pd_mat)
+)
+
+
+lvvals <- lvsplot(phylo.exp, return.vals = T)
+lvvals.null <- lvsplot(phylo.exp.null, return.vals = T)
+
+vec <- lvvals$scaled.lv.coefs
+vec.null <- lvvals.null$scaled.lv.coefs
+vec.null[,2] <- -1 * vec.null[,2]
+rownames(phylo.exp$lv.coefs.median)[8] <- "BSR"
+
+par(mfrow = c(1,2))
+plot(1.2*vec, type = "n", )
+text(1.4 * lvvals$scaled.lvs, labels = traits_sp$Species, col = "grey")
+for(i in 1:nrow(vec)){
+    arrows(0, 0, vec[i,1], vec[i,2], col = "red")
+    text(vec[i,1] * 1.1, vec[i,2] * 1.1, labels = rownames(phylo.exp$lv.coefs.median)[i], col = "red")
+}
+plot(1.4*vec.null, type = "n", )
+text(1.4 * lvvals.null$scaled.lvs, labels = traits_sp$Species, col = "grey")
+for(i in 1:nrow(vec.null)){
+    arrows(0, 0, vec.null[i,1], vec.null[i,2], col = "red")
+    text(vec.null[i,1] * 1.1, vec.null[i,2] * 1.1, labels = rownames(phylo.exp$lv.coefs.median)[i], col = "red")
+}
+
+
 
 
 
