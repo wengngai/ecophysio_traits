@@ -252,7 +252,7 @@ dpred6 <- predict(best.dssi, newdata = data.frame(tPC6 = newtPC6, tPC1 = 0, tPC3
 par(mfrow = c(3, 1), mar = c(6,7,1,2), mgp = c(4,1,0))
 # a) PC1
 plot(traits_sp$SSI ~ tPC1, type="n", xlim = c(-0.35, 0.4),
-     ylab = "", xlab = "Trait PC1\n(Spongy mesophyll dimension)",
+     ylab = "", xlab = "Trait PC1\n(Leaf sclerophylly dimension)",
      cex.lab = 1.4)
 polygon(with(dpred1, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newtPC1,rev(newtPC1)), border = F, col = "#66D7D16e")
 lines(inv.logit(dpred1$fit) ~ newtPC1, lwd = 4, col = "white")
@@ -263,7 +263,7 @@ mtext(side = 3, text = " a)", cex = 1.2, line = -1.5, adj = 0)
 
 # b) PC3
 plot(traits_sp$SSI ~ tPC3, type="n", xlim = c(-0.5, 0.5),
-     ylab = "", xlab = "Trait PC3\n(Sclerophylly-hydraulic efficiency dimension)",
+     ylab = "", xlab = "Trait PC3\n(Leaf fleshiness dimension)",
      cex.lab = 1.4)
 polygon(with(dpred3, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newtPC3,rev(newtPC3)), border = F, col = "#66D7D16e")
 lines(inv.logit(dpred3$fit) ~ newtPC3, lwd = 4, col = "white")
@@ -326,6 +326,7 @@ lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Ma
 legend('topright', bty = "n", title = "Trait PC2",
        legend = c("High: HCR, MGI", "Low: RCI, PEC"),
        lwd = 3, col = c(col.hi1, col.lo1), cex = 1.2)
+mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 ## Trait PC4 effect on survival
 # ranked: RCI, AAN, PPI are lowest, TWA, AFR (but take XFL isntead), ASY are highest
@@ -337,6 +338,7 @@ text(traits_sp$rec^2 ~ tPC4, labels = traits_sp$Species,
      cex = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 1.4, 0.8),
      font = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 2, 1)
 )
+mtext(side = 3, adj = 0, line = -1.5, text = " b)", cex = 1.5)
 
 newdbh <- seq(0.001, 0.5, len=200)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
@@ -351,11 +353,13 @@ lines(needham_w_transform(K = S_parms["Xanthophyllum flavescens","K"], r = S_par
 legend('bottomright', bty = "n", title = "Trait PC4",
        legend = c("High: ASY, XFL", "Low: RCI, AAN"),
        lwd = 3, col = c(col.hi2, col.lo2), cex = 1.2)
+mtext(side = 3, adj = 0, line = -1.5, text = " c)", cex = 1.5)
 dev.off()
 
 ### Trait PCA biplots
 
 summary(PCA.traits)$cont
+screeplot(PCA.traits)
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.pdf", height=14, width=6)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Trait PCA.jpg", height=14, width=6, units="in", res=300)
@@ -385,14 +389,14 @@ for(i in 1:nrow(PCA.traits$CA$v)){
 }
 mtext(text = " b)", side = 3, adj = 0, cex = 1.5, line = -2)
 
-# c) PC6 - PC4
-plot(x = PCA.traits$CA$v[,6]*1.25, y = PCA.traits$CA$v[,4]*1.25, type = "n",
-     ylab = "Trait PC4 (9.9% variance explained)", xlab = "Trait PC6 (5.5% variance explained)",
+# c) PC5 - PC6
+plot(x = PCA.traits$CA$v[,5]*1.25, y = PCA.traits$CA$v[,6]*1.25, type = "n",
+     xlab = "Trait PC5 (8.0% variance explained)", ylab = "Trait PC6 (5.5% variance explained)",
      cex.lab = 1.5)
 for(i in 1:nrow(PCA.traits$CA$v)){
   arrowcol <- ifelse(i %in% c(4:11,15:16), "#DBD56E", "#403D58")
-  arrows(0, 0, PCA.traits$CA$v[i,6], PCA.traits$CA$v[i,4], lwd = 2, col = arrowcol)
-  text(x = PCA.traits$CA$v[i,6]*1.2, y = PCA.traits$CA$v[i,4]*1.2, lwd = 2, col = arrowcol, 
+  arrows(0, 0, PCA.traits$CA$v[i,5], PCA.traits$CA$v[i,6], lwd = 2, col = arrowcol)
+  text(x = PCA.traits$CA$v[i,5]*1.2, y = PCA.traits$CA$v[i,6]*1.2, lwd = 2, col = arrowcol, 
        labels = rownames(PCA.traits$CA$v)[i], cex = 1.2)
 }
 mtext(text = " c)", side = 3, adj = 0, cex = 1.5, line = -2)
