@@ -305,9 +305,8 @@ col.lo2 <- "#FC7753"
 col.hi3 <- "#403D58"
 col.lo3 <- "#F7B39F"
 
-#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Demog effects plots.pdf", height=8, width=8)
-layout(matrix(c(1,2,1,3), ncol = 2))
-par(mar = c(4.5,5.5,1,1))
+#pdf("./outputs/Demog effects plots.pdf", height=12, width=4)
+par(mfrow = c(3,1), mar = c(4.5,5.5,1,1))
 
 ## Trait PC2 effect on AG
 # ranked: RCI, PEC, PCO (but take AFR instead) are lowest, BPA, HCR, MGI are highest
@@ -326,7 +325,7 @@ lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Ma
 legend('topright', bty = "n", title = "Trait PC2",
        legend = c("High: HCR, MGI", "Low: RCI, PEC"),
        lwd = 3, col = c(col.hi1, col.lo1), cex = 1.2)
-mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
+mtext(side = 3, adj = 0, line = -2, text = " a)", cex = 1.5)
 
 ## Trait PC4 effect on survival
 # ranked: RCI, AAN, PPI are lowest, TWA, AFR (but take XFL isntead), ASY are highest
@@ -338,7 +337,7 @@ text(traits_sp$rec^2 ~ tPC4, labels = traits_sp$Species,
      cex = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 1.4, 0.8),
      font = ifelse(traits_sp$Species %in% c("RCI", "AAN", "ASY", "XFL"), 2, 1)
 )
-mtext(side = 3, adj = 0, line = -1.5, text = " b)", cex = 1.5)
+mtext(side = 3, adj = 0, line = -2, text = " b)", cex = 1.5)
 
 newdbh <- seq(0.001, 0.5, len=200)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
@@ -353,7 +352,7 @@ lines(needham_w_transform(K = S_parms["Xanthophyllum flavescens","K"], r = S_par
 legend('bottomright', bty = "n", title = "Trait PC4",
        legend = c("High: ASY, XFL", "Low: RCI, AAN"),
        lwd = 3, col = c(col.hi2, col.lo2), cex = 1.2)
-mtext(side = 3, adj = 0, line = -1.5, text = " c)", cex = 1.5)
+mtext(side = 3, adj = 0, line = -2, text = " c)", cex = 1.5)
 dev.off()
 
 ### Trait PCA biplots

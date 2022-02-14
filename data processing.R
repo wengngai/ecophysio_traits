@@ -224,8 +224,8 @@ traits_sp <- data.frame(traits_sp,
 
 # define function first (at the end of script)
 pairs.cor(traits_sp[2:11])
-pairs.cor(traits_sp[12:23])
-pairs.cor(traits_sp[24:32])
+pairs.cor(traits_sp[12:24])
+pairs.cor(traits_sp[25:32])
 
 # create summary table
 summary(traits_sp)
