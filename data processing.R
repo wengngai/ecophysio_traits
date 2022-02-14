@@ -227,6 +227,16 @@ pairs.cor(traits_sp[2:11])
 pairs.cor(traits_sp[12:23])
 pairs.cor(traits_sp[24:32])
 
+# create summary table
+summary(traits_sp)
+traits_sp$SD <- traits_sp$SD*1000000 # um-2 --> mm-2
+traits_sp$T_VD <- traits_sp$T_VD*1000000 # um-2 --> mm-2
+ranges <- data.frame(
+    trait = names(traits_sp[2:24]),
+    range = paste0(signif(apply(traits_sp[2:24],2,min),3), "-", signif(apply(traits_sp[2:24],2,max),3))
+)
+#write.csv(ranges, "./raw_data/trait ranges.csv")
+
 ### Transforming variables for PCA ###
 
 logit <- function(p){
