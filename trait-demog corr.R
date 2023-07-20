@@ -239,16 +239,16 @@ newdbh <- seq(1,50,len=100)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", 
      ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
 lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
-          newdbh, col = col.lo1, lwd = 3)
+          newdbh, col = col.lo3, lwd = 3)
 lines(zeide_w_transform(a = AG_parms["Mussaendopsis beccariana","a"], b = AG_parms["Mussaendopsis beccariana", "b"], c = AG_parms["Mussaendopsis beccariana", "c"], dbh = newdbh) ~
-          newdbh, col = col.lo1, lwd = 3, lty = 2)
+          newdbh, col = col.lo3, lwd = 3, lty = 2)
 lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Macaranga gigantea", "b"], c = AG_parms["Macaranga gigantea", "c"], dbh = newdbh) ~
-          newdbh, col = col.hi1, lwd = 3)
+          newdbh, col = col.hi3, lwd = 3)
 lines(zeide_w_transform(a = AG_parms["Aporosa symplocoides","a"], b = AG_parms["Aporosa symplocoides", "b"], c = AG_parms["Aporosa symplocoides", "c"], dbh = newdbh) ~
-          newdbh, col = col.hi1, lwd = 3, lty = 2)
+          newdbh, col = col.hi3, lwd = 3, lty = 2)
 legend('topright', bty = "n",
        legend = c("High VA, high VGI: MGI", "Low VA, low VGI: RCI", "Low SD: ASY", "High SD: MBE"),
-       lwd = 3, col = c(col.hi1, col.lo1), lty = c(1,1,2,2))
+       lwd = 3, col = c(col.hi3, col.lo3), lty = c(1,1,2,2))
 mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 newdbh <- seq(0.001, 1, len=200)
@@ -328,15 +328,17 @@ lines(inv.logit(SMpred$fit) ~ newSM, lwd = 4, col = "white")
 text(SSI ~ Th_SM, labels = Species, data = traits_sp,
      cex = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), 1.2, 0.8),
      col = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), "black", "grey60"))
+mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 plot(rec ~ L_VD, type="n", data = traits_sp, xlim = c(0.005,0.012), cex.lab = 1.5,
      ylab = expression(paste("BSR (stems ", year^-1, " ", plot^-1, " ", m^-2, ")")),
      xlab = expression(paste("Leaf vein density (", mu, "m ", mu, "m" ^-2, ")")))
-polygon(with(LVDpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newLVD, rev(newLVD)), border = F, col = "#66D7D16e")
+polygon(with(LVDpred, c(fit + se.fit, rev(fit - se.fit))) ~ c(newLVD, rev(newLVD)), border = F, col = "#B1A7926e")
 lines(LVDpred$fit ~ newLVD, lwd = 4, col = "white")
 text(rec ~ L_VD, labels = Species, data = traits_sp,
-     cex = ifelse(traits_sp$Species %in% c("TFL", "GNE"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("TFL", "GNE"), "black", "grey60"))
+     cex = ifelse(traits_sp$Species %in% c("HCR", "TWA"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("HCR", "TWA"), "black", "grey60"))
+mtext(side = 3, adj = 0, line = -1.5, text = " d)", cex = 1.5)
 dev.off()
 
 
