@@ -233,6 +233,7 @@ col.hi3 <- "#403D58"
 col.lo3 <- "#F7B39F"
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.pdf", height=9, width=4.5)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.jpg", height=9, width=4.5, units = "in", res = 600)
 par(mfrow = c(2,1), mar = c(4.5,5.5,1,1))
 newdbh <- seq(1,50,len=100)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", 
@@ -247,8 +248,8 @@ lines(zeide_w_transform(a = AG_parms["Aporosa symplocoides","a"], b = AG_parms["
           newdbh, col = col.hi1, lwd = 3, lty = 2)
 legend('topright', bty = "n",
        legend = c("High VA, high VGI: MGI", "Low VA, low VGI: RCI", "Low SD: ASY", "High SD: MBE"),
-       lwd = 3, col = c(col.hi1, col.lo1), cex = 1.2, lty = c(1,1,2,2))
-#mtext(side = 3, adj = 0, line = -2, text = " a)", cex = 1.5)
+       lwd = 3, col = c(col.hi1, col.lo1), lty = c(1,1,2,2))
+mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 newdbh <- seq(0.001, 1, len=200)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
@@ -261,7 +262,9 @@ lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms
 lines(needham_w_transform(K = S_parms["Mussaendopsis beccariana","K"], r = S_parms["Mussaendopsis beccariana", "r1"], p = S_parms["Mussaendopsis beccariana", "p1"], dbh = newdbh) ~
           newdbh, col = col.lo2, lwd = 3)
 legend('bottomright', bty = "n", legend = c("High SD: MBE", "Low SD: ASY", "High Th_SM: CSQ", "Low Th_SM: MBE"), col = c(col.hi2, col.lo2), lwd = 3, lty = c(1,1,2,2))
-#mtext(side = 3, line = -1.3, text = " b)", adj = 0)
+mtext(side = 3, line = -1.5, text = " d)", adj = 0, cex = 1.5)
+# note: panels b and c are photos of twig cross sections
+# panels e and f, of stomata
 dev.off()
 
 
@@ -315,6 +318,7 @@ LVDpred <- predict(LVD.BSR, newdata = data.frame(L_VD = newLVD), se.fit = T)
 
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI and BSR correlations.pdf", height=9, width=4.5)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI and BSR correlations.jpg", height=9, width=4.5, units = "in", res = 600)
 par(mfrow = c(2,1), mar = c(4.5,5.5,1,1), mgp = c(3.5,1,0))
 plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5,
      ylab = "Swamp specialization index", 
