@@ -51,7 +51,12 @@ traits_sp[,c(15,18:23)]
 # TRAIT-TRAIT CORRELATIONS #
 ############################
 
-Tz <- traits_sp[2:25]
+names(traits_sp)
+Tz <- traits_sp[c("SLA", "LDMC", "CNR",
+                  "Th", "Th_SM", "L_VD",
+                  "GCL", "SD", 
+                  "VGI", "VA", "T_VD",
+                  "WD", "Hmax")]
 traits_datonly <- Tz
 traits_datonly_scaled <- apply(traits_datonly, 2, scale)
 pairwise <- data.frame(t(combn(ncol(traits_datonly_scaled),2)))
@@ -68,18 +73,18 @@ for(i in 1:nrow(pairwise)){
     pairwise$AIC[i] <- summary(mod)$AIC
 }
 pairwise$p.value <- p.adjust(pairwise$p.value, method = "fdr", choose(ncol(Tz), 2))
-pairwise[which(pairwise$p.value < 0.05),]
+nrow(pairwise[which(pairwise$p.value < 0.05),])
 
 library(circlize)
 
 ordered.traitnames <- c(
     "SLA", "LDMC", "CNR",
-    "Th", "Th_LC", "Th_LE", "Th_SM", "Th_PM", "Th_UE", "Th_UC", "L_VD",
+    "Th", "Th_SM", "L_VD",
     "GCL", "SD", 
-    "RV", "CV", "SV", "OV", "TV", "VGI", "VA", "DH", "T_VD",
+    "VGI", "VA", "T_VD",
     "WD", "Hmax"
 )
-groupnames <- c(rep("leaf", 13), rep("wood", 11))
+groupnames <- c(rep("leaf", 8), rep("wood", 5))
 grid.col <- ifelse(groupnames=="leaf", "#DBD56E", "#403D58")
 names(groupnames) <- ordered.traitnames
 names(grid.col) <- ordered.traitnames
@@ -138,6 +143,7 @@ sel <- c("SLA", "LDMC", "CNR", "Hmax", "WD",
 library(MuMIn)
 library(nlme)
 library(ape)
+library(rr2)
 
 logit <- function(x){
     x[which(x>0.99)] <- 0.99
@@ -157,10 +163,12 @@ for(i in 1:ncol(demog)){
     for(j in 1:ncol(Z)){
         Y <- scale(demog[,i])
         X <- scale(Z[j])
+        m0 <- gls(Y ~ 1, correlation=corBrownian(phy = tree$scenario.3), method="ML")
         mod <- gls(Y ~ X, correlation=corBrownian(phy = tree$scenario.3), method="ML")
         output[[i]]$coef[j] <- summary(mod)$tTable[2,1]
         output[[i]]$upp[j] <- summary(mod)$tTable[2,1] + 1.96*summary(mod)$tTable[2,2]
         output[[i]]$low[j] <- summary(mod)$tTable[2,1] - 1.96*summary(mod)$tTable[2,2]
+        output[[i]]$r2[j] <- paste(round(100*R2.lik(mod, m0), 1), "%")
     }
 }
 
@@ -183,9 +191,9 @@ par(mfrow = c(4,2), mar = c(3,2,2,2), oma = c(2,3,1,6))
 for(i in 1:ncol(demog)){
     cols <- ifelse(output[[i]]$upp < 0 | output[[i]]$low > 0, colmat[i,1], colmat[i,2])
     if(i %in% c(1,3,5,7)) par(mar = c(3,3,2,1)) else par(mar = c(3,1,2,3))
-        plot(y ~ coef, pch = 16, xlim = c(min(low),max(upp)), data = output[[i]], col = cols, 
+        plot(y ~ coef, pch = 16, xlim = c(min(low),max(upp)+0.45), data = output[[i]], col = cols, 
          yaxt = "n", xlab = "", cex = 2)
-    if(i %in% c(1,3,5,7)) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else{
+    if(i %in% c(1,3,5,7)) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else {
         axis(side = 4, at = c(2,5,7.5,9.5,12), las = 1, tick = F, 
              labels = c("Twig anatomical", "Leaf anatomical", "Stomatal", "Wood", "LES"))
         axis(side = 2, at = output[[i]]$y, labels = NA, las = 1)
@@ -195,6 +203,7 @@ for(i in 1:ncol(demog)){
         arrows(output[[i]]$low[j], output[[i]]$y[j], output[[i]]$upp[j], output[[i]]$y[j],
                length = 0, col = cols[j], lwd = 2)
     }
+    text(x = output[[i]]$upp + 0.35, y = 13:1, labels = output[[i]]$r2, cex = 0.8)
     abline(v = 0, lty = 2)
     abline(h = c(3.5, 6.5, 8.5, 10.5), lty = 2)
     mtext(side = 3, adj = 0, text = panellabels[i])
@@ -238,7 +247,7 @@ par(mfrow = c(2,1), mar = c(4.5,5.5,1,1))
 newdbh <- seq(1,50,len=100)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", 
      ylab=expression(paste("AGR (cm ", year^-1, ")")), type="n", cex.lab = 1.5)
-lines(zeide_w_transform(a = AG_parms["Rhodamnia cinerea","a"], b = AG_parms["Rhodamnia cinerea", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
+lines(zeide_w_transform(a = AG_parms["Baccaurea bracteata","a"], b = AG_parms["Baccaurea bracteata", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
           newdbh, col = col.lo3, lwd = 3)
 lines(zeide_w_transform(a = AG_parms["Mussaendopsis beccariana","a"], b = AG_parms["Mussaendopsis beccariana", "b"], c = AG_parms["Mussaendopsis beccariana", "c"], dbh = newdbh) ~
           newdbh, col = col.lo3, lwd = 3, lty = 2)
@@ -247,7 +256,7 @@ lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Ma
 lines(zeide_w_transform(a = AG_parms["Aporosa symplocoides","a"], b = AG_parms["Aporosa symplocoides", "b"], c = AG_parms["Aporosa symplocoides", "c"], dbh = newdbh) ~
           newdbh, col = col.hi3, lwd = 3, lty = 2)
 legend('topright', bty = "n",
-       legend = c("High VA, high VGI: MGI", "Low VA, low VGI: RCI", "Low SD: ASY", "High SD: MBE"),
+       legend = c("High VA, high VGI: MGI", "Low VA, low VGI: BBR", "Low SD: ASY", "High SD: MBE"),
        lwd = 3, col = c(col.hi3, col.lo3), lty = c(1,1,2,2))
 mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
@@ -259,9 +268,14 @@ lines(needham_w_transform(K = S_parms["Campnosperma squamatum","K"], r = S_parms
           newdbh, col = col.hi2, lwd = 3, lty = 2)
 lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
           newdbh, col = col.lo2, lwd = 3, lty = 2)
+lines(needham_w_transform(K = S_parms["Baccaurea bracteata","K"], r = S_parms["Baccaurea bracteata", "r1"], p = S_parms["Baccaurea bracteata", "p1"], dbh = newdbh) ~
+          newdbh, col = col.hi2, lwd = 3, lty = 3)
+lines(needham_w_transform(K = S_parms["Macaranga gigantea","K"], r = S_parms["Macaranga gigantea", "r1"], p = S_parms["Macaranga gigantea", "p1"], dbh = newdbh) ~
+          newdbh, col = col.lo2, lwd = 3, lty = 3)
 lines(needham_w_transform(K = S_parms["Mussaendopsis beccariana","K"], r = S_parms["Mussaendopsis beccariana", "r1"], p = S_parms["Mussaendopsis beccariana", "p1"], dbh = newdbh) ~
           newdbh, col = col.lo2, lwd = 3)
-legend('bottomright', bty = "n", legend = c("High SD: MBE", "Low SD: ASY", "High Th_SM: CSQ", "Low Th_SM: MBE"), col = c(col.hi2, col.lo2), lwd = 3, lty = c(1,1,2,2))
+legend('bottomright', bty = "n", legend = c("High SD: MBE", "Low SD: ASY", "High Th_SM: CSQ", "Low Th_SM: MBE", "Low VA: BBR", "High VA: MGI"), 
+       col = c(col.hi2, col.lo2), lwd = 3, lty = c(1,1,2,2,3,3))
 mtext(side = 3, line = -1.5, text = " d)", adj = 0, cex = 1.5)
 # note: panels b and c are photos of twig cross sections
 # panels e and f, of stomata
@@ -273,6 +287,7 @@ dev.off()
 
 plot(rec ~ VGI, data = traits_sp, type = "n"); text(rec ~ VGI, data = traits_sp, labels = Species)
 plot(VA ~ VGI, data = traits_sp, type = "n"); text(VA ~ VGI, data = traits_sp, labels = Species)
+plot(K ~ VA, data = traits_sp, type = "n"); text(K ~ VA, data = traits_sp, labels = Species)
 plot(SD ~ VGI, data = traits_sp, type = "n"); text(SD ~ VGI, data = traits_sp, labels = Species)
 pairs.cor(traits_sp[c("SD", "VGI", "VA")])
 plot(a ~ VGI, data = traits_sp, type = "n"); text(a ~ VGI, data = traits_sp, labels = Species)
@@ -296,7 +311,6 @@ hist(traits_sp$VGI)
 
 # SSI #
 
-library(rr2)
 summary(SM.ssi <- gls(model = logitSSI ~ Th_SM, data = traits_sp, correlation=corBrownian(phy = tree$scenario.3), method="ML"))
 # create null model to estimate R2
 m0.ssi <- gls(logitSSI ~ 1, correlation=corBrownian(phy = tree$scenario.3), data = traits_sp, method="ML")
