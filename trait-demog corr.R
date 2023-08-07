@@ -168,7 +168,7 @@ for(i in 1:ncol(demog)){
         output[[i]]$coef[j] <- summary(mod)$tTable[2,1]
         output[[i]]$upp[j] <- summary(mod)$tTable[2,1] + 1.96*summary(mod)$tTable[2,2]
         output[[i]]$low[j] <- summary(mod)$tTable[2,1] - 1.96*summary(mod)$tTable[2,2]
-        output[[i]]$r2[j] <- paste(round(100*R2.lik(mod, m0), 1), "%")
+        output[[i]]$r2[j] <- paste0(round(100*R2.lik(mod, m0), 1), "%")
     }
 }
 
@@ -179,11 +179,21 @@ panellabels <- c("a) Growth: a",
                 "d) Survival: K",
                 "e) Survival: r",
                 "f) Survival: p",
-                "g) Sapling recruitment: BNR",
-                "h) Swamp specialization index")
-colmat <- matrix(c("darkgreen", "greenyellow", "darkgreen", "greenyellow", "darkgreen", "greenyellow",
-            "darkred", "lightpink", "darkred", "lightpink", "darkred", "lightpink",
-            "gold4", "khaki", "darkblue", "lightblue"), nrow = 8, ncol = 2, byrow = T)
+                "g) Sapling recruitment: BSR",
+                "h) Swamp association index")
+
+# assign colors
+library(colorspace)
+col.hi1 <- "#66D7D1"
+col.lo1 <- "#B1A792"
+col.hi2 <- "#538A95"
+col.lo2 <- "#FC7753"
+col.hi3 <- "#403D58"
+col.lo3 <- "#F7B39F"
+
+colmat <- matrix(c(col.hi3, lighten(col.hi3, amount = 0.8), col.hi3, lighten(col.hi3, amount = 0.8), col.hi3, lighten(col.hi3, amount = 0.8),
+            col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6),
+            col.lo1, lighten(col.lo1, amount = 0.7), col.hi2, lighten(col.hi2, amount = 0.8)), nrow = 8, ncol = 2, byrow = T)
 
 #pdf("./outputs/trait-demog correlations.pdf", height=10, width=6)
 #jpeg("./outputs/trait-demog correlations.jpg", height=10, width=6, units = "in", res = 300)
@@ -232,15 +242,6 @@ S_parms$sp <- abbrev(rownames(S_parms))
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 
-
-# assign colors
-col.hi1 <- "#66D7D1"
-col.lo1 <- "#B1A792"
-col.hi2 <- "#538A95"
-col.lo2 <- "#FC7753"
-col.hi3 <- "#403D58"
-col.lo3 <- "#F7B39F"
-
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.pdf", height=9, width=4.5)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.jpg", height=9, width=4.5, units = "in", res = 600)
 par(mfrow = c(2,1), mar = c(4.5,5.5,1,1))
@@ -274,7 +275,7 @@ lines(needham_w_transform(K = S_parms["Macaranga gigantea","K"], r = S_parms["Ma
           newdbh, col = col.lo2, lwd = 3, lty = 3)
 lines(needham_w_transform(K = S_parms["Mussaendopsis beccariana","K"], r = S_parms["Mussaendopsis beccariana", "r1"], p = S_parms["Mussaendopsis beccariana", "p1"], dbh = newdbh) ~
           newdbh, col = col.lo2, lwd = 3)
-legend('bottomright', bty = "n", legend = c("High SD: MBE", "Low SD: ASY", "High Th_SM: CSQ", "Low Th_SM: MBE", "Low VA: BBR", "High VA: MGI"), 
+legend('bottomright', bty = "n", legend = c("Low SD: ASY", "High SD: MBE", "High Th_SM: CSQ", "Low Th_SM: MBE", "Low VA: BBR", "High VA: MGI"), 
        col = c(col.hi2, col.lo2), lwd = 3, lty = c(1,1,2,2,3,3))
 mtext(side = 3, line = -1.5, text = " d)", adj = 0, cex = 1.5)
 # note: panels b and c are photos of twig cross sections
@@ -289,15 +290,18 @@ plot(rec ~ VGI, data = traits_sp, type = "n"); text(rec ~ VGI, data = traits_sp,
 plot(VA ~ VGI, data = traits_sp, type = "n"); text(VA ~ VGI, data = traits_sp, labels = Species)
 plot(K ~ VA, data = traits_sp, type = "n"); text(K ~ VA, data = traits_sp, labels = Species)
 plot(SD ~ VGI, data = traits_sp, type = "n"); text(SD ~ VGI, data = traits_sp, labels = Species)
+plot(SD ~ GCL, data = traits_sp, type = "n"); text(SD ~ GCL, data = traits_sp, labels = Species)
 pairs.cor(traits_sp[c("SD", "VGI", "VA")])
 plot(a ~ VGI, data = traits_sp, type = "n"); text(a ~ VGI, data = traits_sp, labels = Species)
 plot(WD ~ Hmax, data = traits_sp, type = "n"); text(WD ~ Hmax, data = traits_sp, labels = Species)
 plot(WD ~ K, data = traits_sp, type = "n"); text(WD ~ K, data = traits_sp, labels = Species)
 plot(Hmax ~ K, data = traits_sp, type = "n"); text(Hmax ~ K, data = traits_sp, labels = Species)
 plot(SD ~ K, data = traits_sp, type = "n"); text(SD ~ K, data = traits_sp, labels = Species)
+plot(SD ~ p, data = traits_sp, type = "n"); text(SD ~ p, data = traits_sp, labels = Species)
 
 plot(SSI ~ Th, data = traits_sp, type = "n"); text(SSI ~ Th, data = traits_sp, labels = Species)
 plot(SSI ~ Th_SM, data = traits_sp, type = "n"); text(SSI ~ Th_SM, data = traits_sp, labels = Species)
+plot(SSI ~ SLA, data = traits_sp, type = "n"); text(SSI ~ SLA, data = traits_sp, labels = Species)
 plot(K ~ Th_SM, data = traits_sp, type = "n"); text(K ~ Th_SM, data = traits_sp, labels = Species)
 
 plot(SD ~ rec, data = traits_sp, type = "n"); text(SD ~ rec, data = traits_sp, labels = Species)
@@ -335,7 +339,7 @@ LVDpred <- predict(LVD.BSR, newdata = data.frame(L_VD = newLVD), se.fit = T)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI and BSR correlations.jpg", height=9, width=4.5, units = "in", res = 600)
 par(mfrow = c(2,1), mar = c(4.5,5.5,1,1), mgp = c(3.5,1,0))
 plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5,
-     ylab = "Swamp specialization index", 
+     ylab = "Swamp association index (SAI)", 
      xlab = "Spongy mesophyll\nrelative thickness (Th_SM)")
 polygon(with(SMpred, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newSM,rev(newSM)), border = F, col = "#66D7D16e")
 lines(inv.logit(SMpred$fit) ~ newSM, lwd = 4, col = "white")
@@ -356,3 +360,16 @@ mtext(side = 3, adj = 0, line = -1.5, text = " d)", cex = 1.5)
 dev.off()
 
 
+names(traits_sp)
+#demog<- traits_sp[c("a", "b", "c", "K", "r", "p", "rec", "SSI")]
+names(demog) <- c("Growth: a",
+                  "Growth: b",
+                  "Growth: c",
+                  "Survival: K",
+                  "Survival: r",
+                  "Survival: p",
+                  "BSR",
+                  "logit(SAI)")
+#jpeg("D:/Dropbox/Functional Traits Project/Figures/demog-ssi correlations.jpg", width = 9, height = 7, units = "in", res = 600)
+pairs.cor(demog)
+dev.off()
