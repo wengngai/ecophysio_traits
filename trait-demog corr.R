@@ -195,15 +195,15 @@ colmat <- matrix(c(col.hi3, lighten(col.hi3, amount = 0.8), col.hi3, lighten(col
             col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6),
             col.lo1, lighten(col.lo1, amount = 0.7), col.hi2, lighten(col.hi2, amount = 0.8)), nrow = 8, ncol = 2, byrow = T)
 
-#pdf("./outputs/trait-demog correlations.pdf", height=10, width=6)
-#jpeg("./outputs/trait-demog correlations.jpg", height=10, width=6, units = "in", res = 300)
-par(mfrow = c(4,2), mar = c(3,2,2,2), oma = c(2,3,1,6))
-for(i in 1:ncol(demog)){
+#pdf("./outputs/Fig 3 trait-demog correlations  v2.pdf", height=8.5, width=6)
+#jpeg("./outputs/Fig 3 trait-demog correlations  v2.jpg", height=8.5, width=6, units = "in", res = 300)
+par(mfrow = c(3,2), mar = c(3,2,2,2), oma = c(2,3,1,6))
+for(i in 1:6){
     cols <- ifelse(output[[i]]$upp < 0 | output[[i]]$low > 0, colmat[i,1], colmat[i,2])
-    if(i %in% c(1,3,5,7)) par(mar = c(3,3,2,1)) else par(mar = c(3,1,2,3))
+    if(i %in% c(1,3,5)) par(mar = c(3,3,2,1)) else par(mar = c(3,1,2,3))
         plot(y ~ coef, pch = 16, xlim = c(min(low),max(upp)+0.45), data = output[[i]], col = cols, 
          yaxt = "n", xlab = "", cex = 2)
-    if(i %in% c(1,3,5,7)) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else {
+    if(i %in% c(1,3,5)) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else {
         axis(side = 4, at = c(2,5,7.5,9.5,12), las = 1, tick = F, 
              labels = c("Twig anatomical", "Leaf anatomical", "Stomatal", "Wood", "LES"))
         axis(side = 2, at = output[[i]]$y, labels = NA, las = 1)
@@ -220,9 +220,6 @@ for(i in 1:ncol(demog)){
 }
 mtext(side = 1, outer = T, text = "Standardized effect size")
 dev.off()
-
-
-
 
 
 ######################
@@ -334,6 +331,44 @@ R2.lik(LVD.BSR, m0.BSR)
 newLVD <- seq(0.005, 0.012, 0.0001)
 LVDpred <- predict(LVD.BSR, newdata = data.frame(L_VD = newLVD), se.fit = T)
 
+#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Fig 5 SSI coef and pred.pdf", height=4.5, width=9)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Fig 5 SSI coef and pred.jpg", height=4.5, width=9, units = "in", res = 600)
+par(mfrow = c(1,2), mar = c(4.5,4.5,1,7), mgp = c(3,1,0))
+
+cols <- ifelse(output[[8]]$upp < 0 | output[[8]]$low > 0, colmat[8,1], colmat[8,2])
+plot(y ~ coef, pch = 16, xlim = c(min(low),max(upp)+0.45), data = output[[8]], col = cols, 
+     yaxt = "n", xlab = "Standardized effect size", cex = 2, cex.lab = 1.5, ylab = "")
+axis(side = 2, at = output[[8]]$y, labels = rownames(output[[8]]), las = 1) 
+axis(side = 4, at = c(2,5,7.5,9.5,12), las = 1, tick = F, 
+     labels = c("Twig anatomical", "Leaf anatomical", "Stomatal", "Wood", "LES"))
+abline(h = c(3.5, 6.5, 8.5, 10.5), lty = 2)
+abline(v = 0, lty = 2)
+for(j in 1:ncol(Z)){
+    arrows(output[[8]]$low[j], output[[8]]$y[j], output[[8]]$upp[j], output[[8]]$y[j],
+           length = 0, col = cols[j], lwd = 2)
+}
+text(x = output[[8]]$upp + 0.35, y = 13:1, labels = output[[8]]$r2, cex = 0.8)
+mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
+
+par(mar = c(4.5,5.5,1,1), mgp = c(3.5,1,0))
+plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5,
+     ylab = "Swamp association index (SAI)", 
+     xlab = "Spongy mesophyll\nrelative thickness (Th_SM)")
+polygon(with(SMpred, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newSM,rev(newSM)), border = F, col = "#66D7D16e")
+lines(inv.logit(SMpred$fit) ~ newSM, lwd = 4, col = "white")
+text(SSI ~ Th_SM, labels = Species, data = traits_sp,
+     cex = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), 1.2, 0.8),
+     col = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), "black", "grey60"))
+mtext(side = 3, adj = 0, line = -1.5, text = " b)", cex = 1.5)
+
+dev.off()
+
+
+
+
+
+
+## OLD FIGURE ##
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI and BSR correlations.pdf", height=9, width=4.5)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\SSI and BSR correlations.jpg", height=9, width=4.5, units = "in", res = 600)
