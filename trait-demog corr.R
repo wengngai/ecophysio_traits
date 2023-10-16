@@ -1,5 +1,6 @@
+library(nlme)
 library(vegan)
-traits_sp <- read.csv("combined traits_sp level_Oct21.csv", row.names = 1, header = T)
+traits_sp <- read.csv("combined traits_sp level_Oct23.csv", row.names = 1, header = T)
 summary(traits_sp)
 
 #####################
@@ -55,7 +56,7 @@ names(traits_sp)
 Tz <- traits_sp[c("SLA", "LDMC", "CNR",
                   "Th", "Th_SM", "L_VD",
                   "GCL", "SD", 
-                  "VGI", "VA", "T_VD",
+                  "VGI", "DH", "T_VD",
                   "WD", "Hmax")]
 traits_datonly <- Tz
 traits_datonly_scaled <- apply(traits_datonly, 2, scale)
@@ -81,7 +82,7 @@ ordered.traitnames <- c(
     "SLA", "LDMC", "CNR",
     "Th", "Th_SM", "L_VD",
     "GCL", "SD", 
-    "VGI", "VA", "T_VD",
+    "VGI", "DH", "T_VD",
     "WD", "Hmax"
 )
 groupnames <- c(rep("leaf", 8), rep("wood", 5))
@@ -109,23 +110,23 @@ legend(x= 1.1, y = -0.2, title = "Organ", bty = "n",
 dev.off()
 circos.clear()
 
-lat <- ordered.traitnames[5:10]
+#lat <- ordered.traitnames[5:10]
 
-lat.pw <- pairwise[which(pairwise$y.name %in% lat & pairwise$x.name %in% lat), 3:5]
+#lat.pw <- pairwise[which(pairwise$y.name %in% lat & pairwise$x.name %in% lat), 3:5]
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Leaf layer correlations.pdf", height=6, width=10)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Leaf layer correlations.jpg", height=6, width=10, units="in", res=300)
-chordDiagram(lat.pw,
-             symmetric = T, order = lat,
-             annotationTrack = c("name", "grid"), 
-             annotationTrackHeight = mm_h(c(3, 3)),
-             grid.col = "#DBD56E", transparency = 0.5, 
-             col = ifelse(lat.pw$coef>0, "#66D7D1", ifelse(lat.pw$coef==0, "#F2EFEA", "#FC7753"))
-)
-legend(x= 1.1, y = -0.5, title = "Correlation", bty = "n",
-       legend=c("Positive", "Negative"), fill = adjustcolor(c("#66D7D1", "#FC7753"), alpha.f = 0.5))
-dev.off()
-circos.clear()
+#chordDiagram(lat.pw,
+#             symmetric = T, order = lat,
+#             annotationTrack = c("name", "grid"), 
+#             annotationTrackHeight = mm_h(c(3, 3)),
+#             grid.col = "#DBD56E", transparency = 0.5, 
+#             col = ifelse(lat.pw$coef>0, "#66D7D1", ifelse(lat.pw$coef==0, "#F2EFEA", "#FC7753"))
+#)
+#legend(x= 1.1, y = -0.5, title = "Correlation", bty = "n",
+#       legend=c("Positive", "Negative"), fill = adjustcolor(c("#66D7D1", "#FC7753"), alpha.f = 0.5))
+#dev.off()
+#circos.clear()
 
 
 pairwise[pairwise$p.value < 0.05, 3:5]
@@ -133,7 +134,7 @@ pairwise[pairwise$p.value < 0.05, 3:5]
 
 sel <- c("SLA", "LDMC", "CNR", "Hmax", "WD",
          "GCL", "SD", "Th_SM", "Th", "L_VD",
-         "T_VD", "VGI", "VA"
+         "T_VD", "VGI", "DH"
 )
 
 ########
@@ -195,8 +196,8 @@ colmat <- matrix(c(col.hi3, lighten(col.hi3, amount = 0.8), col.hi3, lighten(col
             col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6),
             col.lo1, lighten(col.lo1, amount = 0.7), col.hi2, lighten(col.hi2, amount = 0.8)), nrow = 8, ncol = 2, byrow = T)
 
-#pdf("./outputs/Fig 3 trait-demog correlations  v2.pdf", height=8.5, width=6)
-#jpeg("./outputs/Fig 3 trait-demog correlations  v2.jpg", height=8.5, width=6, units = "in", res = 300)
+#pdf("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v2.pdf", height=8.5, width=6)
+#jpeg("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v2.jpg", height=8.5, width=6, units = "in", res = 300)
 par(mfrow = c(3,2), mar = c(3,2,2,2), oma = c(2,3,1,6))
 for(i in 1:6){
     cols <- ifelse(output[[i]]$upp < 0 | output[[i]]$low > 0, colmat[i,1], colmat[i,2])
@@ -239,8 +240,8 @@ S_parms$sp <- abbrev(rownames(S_parms))
 zeide_w_transform <- function(a, b, c, dbh) (dbh ^ b) * exp(a - dbh*c)
 needham_w_transform <- function(K, r, p, dbh) K / (1 + exp(-r * (dbh - p) ))
 
-#pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.pdf", height=9, width=4.5)
-#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Zeide and Needham correlations.jpg", height=9, width=4.5, units = "in", res = 600)
+#pdf("D:/Dropbox/Functional Traits Project/Figures/Zeide and Needham correlations Oct23.pdf", height=9, width=4.5)
+#jpeg("D:/Dropbox/Functional Traits Project/Figures/Zeide and Needham correlations Oct23.jpg", height=9, width=4.5, units = "in", res = 600)
 par(mfrow = c(2,1), mar = c(4.5,5.5,1,1))
 newdbh <- seq(1,50,len=100)
 plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)", 
@@ -248,32 +249,33 @@ plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0,0.7), xlab="DBH (cm)",
 lines(zeide_w_transform(a = AG_parms["Baccaurea bracteata","a"], b = AG_parms["Baccaurea bracteata", "b"], c = AG_parms["Rhodamnia cinerea", "c"], dbh = newdbh) ~
           newdbh, col = col.lo3, lwd = 3)
 lines(zeide_w_transform(a = AG_parms["Mussaendopsis beccariana","a"], b = AG_parms["Mussaendopsis beccariana", "b"], c = AG_parms["Mussaendopsis beccariana", "c"], dbh = newdbh) ~
-          newdbh, col = col.lo3, lwd = 3, lty = 2)
+          newdbh, col = col.lo2, lwd = 3, lty = 3)
 lines(zeide_w_transform(a = AG_parms["Macaranga gigantea","a"], b = AG_parms["Macaranga gigantea", "b"], c = AG_parms["Macaranga gigantea", "c"], dbh = newdbh) ~
           newdbh, col = col.hi3, lwd = 3)
 lines(zeide_w_transform(a = AG_parms["Aporosa symplocoides","a"], b = AG_parms["Aporosa symplocoides", "b"], c = AG_parms["Aporosa symplocoides", "c"], dbh = newdbh) ~
-          newdbh, col = col.hi3, lwd = 3, lty = 2)
+          newdbh, col = col.hi2, lwd = 3, lty = 3)
 legend('topright', bty = "n",
-       legend = c("High VA, high VGI: MGI", "Low VA, low VGI: BBR", "Low SD: ASY", "High SD: MBE"),
-       lwd = 3, col = c(col.hi3, col.lo3), lty = c(1,1,2,2))
+       legend = c("High DH, high VGI: MGI", "Low DH, low VGI: BBR", "Low SD: ASY", "High SD: MBE"),
+       lwd = 3, col = c(col.hi3, col.lo3, col.hi2, col.lo2), lty = c(1, 1, 3, 3))
 mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 newdbh <- seq(0.001, 1, len=200)
-plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.4,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
+plot(rep(0.5, length(newdbh)) ~ newdbh, ylim=c(0.5,1), xlab="DBH (cm)", ylab="Survival", type="n", cex.lab = 1.5)
 lines(needham_w_transform(K = S_parms["Aporosa symplocoides","K"], r = S_parms["Aporosa symplocoides", "r1"], p = S_parms["Aporosa symplocoides", "p1"], dbh = newdbh) ~
-          newdbh, col = col.hi2, lwd = 3)
-lines(needham_w_transform(K = S_parms["Campnosperma squamatum","K"], r = S_parms["Campnosperma squamatum", "r1"], p = S_parms["Campnosperma squamatum", "p1"], dbh = newdbh) ~
-          newdbh, col = col.hi2, lwd = 3, lty = 2)
-lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
-          newdbh, col = col.lo2, lwd = 3, lty = 2)
-lines(needham_w_transform(K = S_parms["Baccaurea bracteata","K"], r = S_parms["Baccaurea bracteata", "r1"], p = S_parms["Baccaurea bracteata", "p1"], dbh = newdbh) ~
           newdbh, col = col.hi2, lwd = 3, lty = 3)
-lines(needham_w_transform(K = S_parms["Macaranga gigantea","K"], r = S_parms["Macaranga gigantea", "r1"], p = S_parms["Macaranga gigantea", "p1"], dbh = newdbh) ~
-          newdbh, col = col.lo2, lwd = 3, lty = 3)
 lines(needham_w_transform(K = S_parms["Mussaendopsis beccariana","K"], r = S_parms["Mussaendopsis beccariana", "r1"], p = S_parms["Mussaendopsis beccariana", "p1"], dbh = newdbh) ~
-          newdbh, col = col.lo2, lwd = 3)
-legend('bottomright', bty = "n", legend = c("Low SD: ASY", "High SD: MBE", "High Th_SM: CSQ", "Low Th_SM: MBE", "Low VA: BBR", "High VA: MGI"), 
-       col = c(col.hi2, col.lo2), lwd = 3, lty = c(1,1,2,2,3,3))
+          newdbh, col = col.lo2, lwd = 3, lty = 3)
+lines(needham_w_transform(K = S_parms["Campnosperma squamatum","K"], r = S_parms["Campnosperma squamatum", "r1"], p = S_parms["Campnosperma squamatum", "p1"], dbh = newdbh) ~
+          newdbh, col = col.hi1, lwd = 3, lty = 2)
+lines(needham_w_transform(K = S_parms["Archidendron clypearia","K"], r = S_parms["Archidendron clypearia", "r1"], p = S_parms["Archidendron clypearia", "p1"], dbh = newdbh) ~
+          newdbh, col = col.lo1, lwd = 3, lty = 2)
+lines(needham_w_transform(K = S_parms["Baccaurea bracteata","K"], r = S_parms["Baccaurea bracteata", "r1"], p = S_parms["Baccaurea bracteata", "p1"], dbh = newdbh) ~
+          newdbh, col = col.lo3, lwd = 3, lty = 1)
+lines(needham_w_transform(K = S_parms["Macaranga gigantea","K"], r = S_parms["Macaranga gigantea", "r1"], p = S_parms["Macaranga gigantea", "p1"], dbh = newdbh) ~
+          newdbh, col = col.hi3, lwd = 3, lty = 1)
+
+legend('bottomright', bty = "n", legend = c("High Th_SM: CSQ", "Low Th_SM: ACL"), 
+       col = c(col.hi1, col.lo1), lwd = 3, lty = c(2,2))
 mtext(side = 3, line = -1.5, text = " d)", adj = 0, cex = 1.5)
 # note: panels b and c are photos of twig cross sections
 # panels e and f, of stomata
@@ -284,12 +286,13 @@ dev.off()
 
 
 plot(rec ~ VGI, data = traits_sp, type = "n"); text(rec ~ VGI, data = traits_sp, labels = Species)
-plot(VA ~ VGI, data = traits_sp, type = "n"); text(VA ~ VGI, data = traits_sp, labels = Species)
-plot(K ~ VA, data = traits_sp, type = "n"); text(K ~ VA, data = traits_sp, labels = Species)
+plot(DH ~ VGI, data = traits_sp, type = "n"); text(DH ~ VGI, data = traits_sp, labels = Species)
+plot(K ~ DH, data = traits_sp, type = "n"); text(K ~ DH, data = traits_sp, labels = Species)
 plot(SD ~ VGI, data = traits_sp, type = "n"); text(SD ~ VGI, data = traits_sp, labels = Species)
 plot(SD ~ GCL, data = traits_sp, type = "n"); text(SD ~ GCL, data = traits_sp, labels = Species)
-pairs.cor(traits_sp[c("SD", "VGI", "VA")])
+pairs.cor(traits_sp[c("SD", "VGI", "DH")])
 plot(a ~ VGI, data = traits_sp, type = "n"); text(a ~ VGI, data = traits_sp, labels = Species)
+plot(a ~ DH, data = traits_sp, type = "n"); text(a ~ DH, data = traits_sp, labels = Species)
 plot(WD ~ Hmax, data = traits_sp, type = "n"); text(WD ~ Hmax, data = traits_sp, labels = Species)
 plot(WD ~ K, data = traits_sp, type = "n"); text(WD ~ K, data = traits_sp, labels = Species)
 plot(Hmax ~ K, data = traits_sp, type = "n"); text(Hmax ~ K, data = traits_sp, labels = Species)
@@ -351,9 +354,10 @@ text(x = output[[8]]$upp + 0.35, y = 13:1, labels = output[[8]]$r2, cex = 0.8)
 mtext(side = 3, adj = 0, line = -1.5, text = " a)", cex = 1.5)
 
 par(mar = c(4.5,5.5,1,1), mgp = c(3.5,1,0))
-plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5,
+plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5, xaxt = "n",
      ylab = "Swamp association index (SAI)", 
-     xlab = "Spongy mesophyll\nrelative thickness (Th_SM)")
+     xlab = "Spongy mesophyll\nrelative thickness (Th_SM; %)")
+axis(side = 1, at = logit(c(0.35, 0.45, 0.55, 0.65)), labels = c(35, 45, 55, 65))
 polygon(with(SMpred, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newSM,rev(newSM)), border = F, col = "#66D7D16e")
 lines(inv.logit(SMpred$fit) ~ newSM, lwd = 4, col = "white")
 text(SSI ~ Th_SM, labels = Species, data = traits_sp,

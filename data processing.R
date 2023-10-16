@@ -21,9 +21,12 @@ summary(Hmax)
 summary(Varea <- na.omit(Varea[1:6]))
 
 ## Area
-Varea_twig <- aggregate(x = Varea["Area"], by = list(Species=Varea$Species, Individual=Varea$Individual, Twig=Varea$Twig), FUN = mean)
-Varea_indiv <- aggregate(x = Varea_twig["Area"], by = list(Species=Varea_twig$Species, Individual=Varea_twig$Individual), FUN = mean)
-Varea_sp <- aggregate(x = Varea_indiv["Area"], by = list(Species=Varea_indiv$Species), FUN = mean)
+Varea_twig <- aggregate(x = Varea["Area"], by = list(Species=Varea$Species, Individual=Varea$Individual, Twig=Varea$Twig), FUN = sum)
+TS_twig <- aggregate(x = vessels$work.area, by = list(Species=vessels$Species, Individual=vessels$Individual, Twig=vessels$Twig), FUN = mean)
+Varea_twig$TS_area <- TS_twig$x[match(Varea_twig$Twig, TS_twig$Twig)]
+Varea_twig$VA <- log(with(Varea_twig, Area/TS_area))
+Varea_indiv <- aggregate(x = Varea_twig["VA"], by = list(Species=Varea_twig$Species, Individual=Varea_twig$Individual), FUN = mean, na.rm = T)
+Varea_sp <- aggregate(x = Varea_indiv["VA"], by = list(Species=Varea_indiv$Species), FUN = mean, na.rm = T)
 
 ## DH
 DH <- function(x) sum((x^4)/length(x))^(1/4)
@@ -212,7 +215,7 @@ traits_sp <- data.frame(traits_sp,
                    WD = WD_sp[match(traits_sp$Species, WD_sp$Species), "WD"],
                    lsoft_sp[match(traits_sp$Species, lsoft_sp$Species), 2:4],
                    DH = DH_sp[match(traits_sp$Species, DH_sp$Species), "DH"],
-                   VA = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "Area"],
+                   VA = Varea_sp[match(traits_sp$Species, Varea_sp$Species), "VA"],
                    llayers_sp[match(traits_sp$Species, llayers_sp$Species), 2:7],
                    CNR = CNR[match(traits_sp$Species, CNR$Sp), "CN.Ratio.Fresh"],
                    Hmax = Hmax[match(traits_sp$Species, Hmax$Sp), "Value"],
@@ -265,7 +268,7 @@ traits_sp$p1 <- logtrans(traits_sp$p1)
 traits_sp$b <- log(traits_sp$b)
 traits_sp$rec <- sqrt(traits_sp$rec)
 summary(traits_sp)
-#write.csv(traits_sp, "combined traits_sp level_Oct21.csv")
+#write.csv(traits_sp, "combined traits_sp level_Oct23.csv")
 
 
 ## Defining pairs.cor() function
