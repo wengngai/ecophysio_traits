@@ -33,15 +33,20 @@ abbrev.tip <- function(x){
 traits_sp <- traits_sp[match(abbrev.tip(tree$scenario.3$tip.label), traits_sp$Species),]
 
 # EITHER OR:
-tree$tip.label <- abbrev.tip(tree$tip.label)
-#tree$tip.label <- spp_list$Species[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
-#tree$tip.label <- spp_list$long_name[match(abbrev.tip(tree$tip.label), spp_list$Sp)]
+tree$scenario.3$tip.label <- paste0(
+    gsub("_", " ", tree$scenario.3$tip.label), " (",
+    spp_list$Family[match(gsub("_", " ", tree$scenario.3$tip.label), spp_list$Species)],
+    ") ", traits_sp$Species)
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.pdf", width = 8, height = 8)
 #jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Phylogenetic tree.jpg", width = 8, height = 8, units = "in", res = 300)
 plot(tree$scenario.3, no.margin=TRUE,
      tip.color = ifelse(traits_sp$SSI > 0.67, "#538A95", ifelse(traits_sp$SSI < 0.33, "#FC7753", "#B1A792")))
 dev.off()
+
+
+
+
 
 ### Traits ###
 
@@ -283,7 +288,8 @@ dev.off()
 
 
 
-
+plot(DH ~ WD, data = traits_sp, type = "n"); text(DH ~ WD, data = traits_sp, labels = Species)
+plot(DH ~ Hmax, data = traits_sp, type = "n"); text(DH ~ WD, data = traits_sp, labels = Species)
 
 plot(rec ~ VGI, data = traits_sp, type = "n"); text(rec ~ VGI, data = traits_sp, labels = Species)
 plot(DH ~ VGI, data = traits_sp, type = "n"); text(DH ~ VGI, data = traits_sp, labels = Species)
