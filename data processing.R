@@ -271,6 +271,123 @@ summary(traits_sp)
 #write.csv(traits_sp, "combined traits_sp level_Oct23.csv")
 
 
+##################################
+# INVESTIGATING TRAIT PLASTICITY #
+##################################
+
+indiv_traits <- read.csv("./raw_data/pilot data for intraspecific analysis.csv")
+summary(indiv_traits)
+indiv_traits$indiv <- toupper(indiv_traits$indiv)
+indiv_traits <- aggregate(x = indiv_traits[,7:10], by = list(Individual = indiv_traits$indiv, Hydrology = indiv_traits$hydrology), FUN = mean, na.rm = T)
+
+
+# these are the data with individual level data
+head(Varea_indiv)
+head(llayers_indiv)
+head(vessels_indiv)
+head(lvein_indiv)
+head(WD)
+WD$individual <- sapply(str_split(WD$Twig, "-"), "[[", 1)
+WD_indiv <- aggregate(x = WD["Density"], by = list(Species=WD$Species, Individual=WD$individual), FUN = mean)
+head(DH_indiv)
+head(stomata_indiv)
+
+indiv_traits$VA <- Varea_indiv$VA[match(indiv_traits$Individual, Varea_indiv$Individual)]
+indiv_traits$Th_SM <- llayers_indiv$SM[match(indiv_traits$Individual, llayers_indiv$Individual)]
+indiv_traits$VGI <- vessels_indiv$VGI[match(indiv_traits$Individual, vessels_indiv$Individual)]
+indiv_traits$T_VD <- vessels_indiv$T_VD[match(indiv_traits$Individual, vessels_indiv$Individual)]
+indiv_traits$L_VD <- lvein_indiv$x[match(indiv_traits$Individual, lvein_indiv$Individual)]
+indiv_traits$WD <- WD_indiv$Density[match(indiv_traits$Individual, WD_indiv$Individual)]
+indiv_traits$DH <- DH_indiv$mean.diameter[match(indiv_traits$Individual, DH_indiv$Individual)]
+indiv_traits$GCL <- stomata_indiv$GCL[match(indiv_traits$Individual, stomata_indiv$Individual)]
+indiv_traits$SD <- stomata_indiv$SD[match(indiv_traits$Individual, stomata_indiv$Individual)]
+indiv_traits$Species <- str_sub(indiv_traits$Individual, 1, 3)
+
+library(nlme)
+summary(indiv_traits)
+pairs.cor(indiv_traits[,3:15])
+
+indiv_traits$sla[which(indiv_traits$sla==0)] <- NA
+indiv_traits$dbh[which(indiv_traits$dbh==0)] <- NA
+
+hist(indiv_traits$thickness <- log(indiv_traits$thickness))
+hist(indiv_traits$sla <- log(indiv_traits$sla))
+hist(indiv_traits$dbh <- log(indiv_traits$dbh))
+hist(indiv_traits$L_VD <- log(indiv_traits$L_VD))
+hist(indiv_traits$SD <- log(indiv_traits$SD))
+hist(indiv_traits$VGI <- log(indiv_traits$VGI))
+hist(indiv_traits$DH <- log(indiv_traits$DH))
+
+indiv_traits[,3:15] <- apply(indiv_traits[,3:15], 2, scale)
+
+modlist <- list()
+
+modlist[[1]] <- lme(sla ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[2]] <- lme(ldmc ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[3]] <- lme(thickness ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[4]] <- lme(Th_SM ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[5]] <- lme(L_VD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[6]] <- lme(SD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[7]] <- lme(GCL ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[8]] <- lme(WD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[9]] <- lme(T_VD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[10]] <- lme(VGI ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[11]] <- lme(DH ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+
+plot(modlist[[1]])
+
+hydro.coef <- data.frame(coef = rep(NA, length(modlist)), upp = NA, low = NA)
+dbh.coef <- data.frame(coef = rep(NA, length(modlist)), upp = NA, low = NA)
+
+for(i in 1:length(modlist)){
+    hydro.coef$coef[i] <- summary(modlist[[i]])$tTable[2, 1]
+    hydro.coef$upp[i] <- summary(modlist[[i]])$tTable[2, 1] + 1.96*summary(modlist[[i]])$tTable[2, 2]
+    hydro.coef$low[i] <- summary(modlist[[i]])$tTable[2, 1] - 1.96*summary(modlist[[i]])$tTable[2, 2]
+    dbh.coef$coef[i] <- summary(modlist[[i]])$tTable[3, 1]
+    dbh.coef$upp[i] <- summary(modlist[[i]])$tTable[3, 1] + 1.96*summary(modlist[[i]])$tTable[3, 2]
+    dbh.coef$low[i] <- summary(modlist[[i]])$tTable[3, 1] - 1.96*summary(modlist[[i]])$tTable[3, 2]
+}
+
+hydro.cols <- ifelse(hydro.coef$upp < 0 | hydro.coef$low > 0, "black", "grey")
+dbh.cols <- ifelse(dbh.coef$upp < 0 | dbh.coef$low > 0, "black", "grey")
+
+#jpeg("./outputs/trait plasticity analysis.jpg", width = 4, height = 7, units = "in", res = 300)
+par(mar = c(4,5,2,2))
+plot(seq(0.9, 10.9, 1) ~ hydro.coef$coef, pch = 16, xlim = c(-1,0.5), cex = 2, ylim = c(0.5, 12), col = hydro.cols,
+     ylab = "", xlab = "Standardized effect size", yaxt = "n")
+points(seq(1.1, 11.1, 1) ~ dbh.coef$coef, pch = 17, cex = 2, ylim = c(0, 12), col = dbh.cols)
+
+for(i in 1:length(modlist)){
+    arrows(hydro.coef$upp[i], i-0.1, hydro.coef$low[i], i-0.1, length = 0, lwd = 2, col = hydro.cols[i])
+    arrows(dbh.coef$upp[i], i+0.1, dbh.coef$low[i], i+0.1, length = 0, lwd = 2, col = dbh.cols[i])
+}
+abline(v = 0, lty = 2)
+axis(side = 2, at = 1:11, labels = c("SLA", "LDMC", "Th", "Th_SM", "L_VD", "SD", "GCL", "WD", "T_VD", "VGI", "DHI"), las = 1)
+legend('topleft', pch = c(16,17), legend = c("Waterlogging", "DBH"), bty = "n")
+dev.off()
+apply(!is.na(indiv_traits[,c(5,4,3,8,11,15,14,12,10,9,13)]), 2, sum)
+# just state: btwn 79 to 109 individuals
+
+library(MuMIn)
+
+Rval <- function(x) round(r.squaredGLMM(x)[1], 3)
+hydrop <- function(x) round(summary(x)$tTable[2,5], 3)
+dbhp <- function(x) round(summary(x)$tTable[3,5], 3)
+
+Tab <- data.frame(
+    trait = c("SLA", "LDMC", "Th", "Th_SM", "L_VD", "SD", "GCL", "WD", "T_VD", "VGI", "DHI"),
+    hydro.p = unlist(lapply(modlist, hydrop)),
+    dbh.p = unlist(lapply(modlist, dbhp)),
+    R2m = unlist(lapply(modlist, Rval))
+)
+Tab$n <- apply(!is.na(indiv_traits[,c(5,4,3,8,11,15,14,12,10,9,13)]), 2, sum)    
+#write.csv(Tab, "./outputs/Table S2.csv")
+
+
+#
+
+
+
 ## Defining pairs.cor() function
 pairs.cor <- function (x,y,smooth=TRUE, digits=2,  ...)
 {
