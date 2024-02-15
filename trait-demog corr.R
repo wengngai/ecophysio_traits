@@ -418,3 +418,108 @@ names(demog) <- c("Growth: a",
 #jpeg("D:/Dropbox/Functional Traits Project/Figures/demog-ssi correlations.jpg", width = 9, height = 7, units = "in", res = 600)
 pairs.cor(demog)
 dev.off()
+
+
+
+##########################
+# SUPPLEMENTARY ANALYSES #
+##########################
+
+library(brms)
+#load(file="D:\\Dropbox\\twn idiwn\\Post doc\\Chong Kwek Yan - CRSF\\Data\\growth analyses\\Rdata\\NP MS Env models.Rdata")
+#load(file="D:\\Dropbox\\twn idiwn\\Post doc\\Chong Kwek Yan - CRSF\\Data\\mortality analyses\\Rdata\\surv mods for NP MS.Rdata")
+summary(growth.brm.list[[1]])
+summary(surv.mod.list[[1]])
+summary(growth.brm.list[[2]])
+
+growth.parms <- data.frame(
+    a.dry = coef(growth.brm.list[[2]])$species[,"Estimate","a_Intercept"],
+    a.wet = coef(growth.brm.list[[2]])$species[,"Estimate","a_Intercept"] + coef(growth.brm.list[[2]])$species[,"Estimate","a_swampwet"],
+    b = coef(growth.brm.list[[2]])$species[,"Estimate","b_Intercept"],
+    c = coef(growth.brm.list[[2]])$species[,"Estimate","c_Intercept"],
+    a.null = coef(growth.brm.list[[1]])$species[,"Estimate","a_Intercept"],
+    b.null = coef(growth.brm.list[[1]])$species[,"Estimate","b_Intercept"],
+    c.null = coef(growth.brm.list[[1]])$species[,"Estimate","c_Intercept"])
+surv.parms <- data.frame(
+    K.dry = coef(surv.mod.list[[2]])$species[,"Estimate","K_Intercept"],
+    K.wet = coef(surv.mod.list[[2]])$species[,"Estimate","K_Intercept"] + coef(surv.mod.list[[2]])$species[,"Estimate","Kswamp_Intercept"],
+    p = coef(surv.mod.list[[2]])$species[,"Estimate","p1_Intercept"],
+    r = coef(surv.mod.list[[2]])$species[,"Estimate","r1_Intercept"],
+    K.null = coef(surv.mod.list[[1]])$species[,"Estimate","K_Intercept"],
+    p.null = coef(surv.mod.list[[1]])$species[,"Estimate","p1_Intercept"],
+    r.null = coef(surv.mod.list[[1]])$species[,"Estimate","r1_Intercept"])
+
+#jpeg(filename = "./outputs/Context dependency of demog parms.jpg", width = 7, height = 7, units = "in", res = 300)
+par(mfrow = c(2,2), mar = c(4,4,1,1))
+plot(a.null ~ a.dry, data = growth.parms, cex = 3, 
+     ylab = "Parameter a (null model)", xlab = "Species specific a in non-swamp conditions")
+abline(lm(a.null ~ a.dry, data = growth.parms))
+mtext(side = 3, line = -3, adj = 0.1, text = paste("rho = ", round(cor.test(growth.parms$a.null, growth.parms$a.dry)$estimate, 3)))
+mtext(side = 3, line = -1, adj = 0, text = " a)")
+
+plot(a.null ~ a.wet, data = growth.parms, cex = 3, 
+     ylab = "Parameter a (null model)", xlab = "Species specific a in swamp conditions")
+abline(lm(a.null ~ a.wet, data = growth.parms))
+mtext(side = 3, line = -3, adj = 0.1, text = paste("rho = ", round(cor.test(growth.parms$a.null, growth.parms$a.wet)$estimate, 3)))
+mtext(side = 3, line = -1, adj = 0, text = " b)")
+
+plot(K.null ~ K.dry, data = surv.parms, cex = 3, 
+     ylab = "Parameter K (null model)", xlab = "Species specific K in non-swamp conditions")
+abline(lm(K.null ~ K.dry, data = surv.parms))
+mtext(side = 3, line = -3, adj = 0.1, text = paste("rho = ", round(cor.test(surv.parms$K.null, surv.parms$K.dry)$estimate, 3)))
+mtext(side = 3, line = -1, adj = 0, text = " c)")
+
+plot(K.null ~ K.wet, data = surv.parms, cex = 3, 
+     ylab = "Parameter K (null model)", xlab = "Species specific K in swamp conditions")
+abline(lm(K.null ~ K.wet, data = surv.parms))
+mtext(side = 3, line = -3, adj = 0.1, text = paste("rho = ", round(cor.test(surv.parms$K.null, surv.parms$K.wet)$estimate, 3)))
+mtext(side = 3, line = -1, adj = 0, text = " d)")
+dev.off()
+
+# check if params in original full are close enough to params in reanalysis
+abbrev <- function(x){
+    x <- gsub(".", " ", x, fixed = T)
+    names <- str_split(x, " ")
+    toupper(paste0(substr(sapply(names, "[[", 1), 1, 1), substr(sapply(names, "[[", 2), 1, 2)))
+}
+
+
+logit <- function(p){
+    if(sum(p==0)>0){
+        q <- p+0.001
+        return(log( q / (1 - q) ))
+    } else { 
+        return(log( p / (1 - p) ))
+    }
+}
+logtrans <- function(x){
+    if(sum(x==0)>0){
+        offset <- min(x[which(x>0)]) / 2
+        return( log(x + offset) )
+    } else { 
+        return(log(x))
+    }
+}
+
+
+traits_sp <- cbind(traits_sp, growth.parms[match(traits_sp$Species, abbrev(row.names(growth.parms))), c("a.null", "b.null", "c.null")])
+traits_sp <- cbind(traits_sp, surv.parms[match(traits_sp$Species, abbrev(row.names(surv.parms))), c("K.null", "p.null", "r.null")])
+
+traits_sp$K.null <- logit(traits_sp$K.null)
+traits_sp$p.null <- exp(traits_sp$p.null)
+traits_sp$c.null <- exp(traits_sp$c.null)
+
+plot(a.null ~ a, traits_sp); abline(0, 1)
+plot(b.null ~ b, traits_sp); abline(0, 1)
+plot(c.null ~ c, traits_sp); abline(0, 1)
+
+plot(K.null ~ K, traits_sp); abline(0, 1)
+plot(p.null ~ p, traits_sp); abline(0, 1)
+plot(r.null ~ r, traits_sp); abline(0, 1)
+
+
+dev.off()
+
+
+
+
