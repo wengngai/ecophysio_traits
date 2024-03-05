@@ -201,15 +201,16 @@ colmat <- matrix(c(col.hi3, lighten(col.hi3, amount = 0.8), col.hi3, lighten(col
             col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6), col.lo2, lighten(col.lo2, amount = 0.6),
             col.lo1, lighten(col.lo1, amount = 0.7), col.hi2, lighten(col.hi2, amount = 0.8)), nrow = 8, ncol = 2, byrow = T)
 
-#pdf("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v2.pdf", height=8.5, width=6)
-#jpeg("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v2.jpg", height=8.5, width=6, units = "in", res = 300)
-par(mfrow = c(3,2), mar = c(3,2,2,2), oma = c(2,3,1,6))
+#pdf("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v3.pdf", height=8.5, width=6)
+#jpeg("D:/Dropbox/Functional Traits Project/Figures/Fig 3 trait-demog correlations v3.jpg", height=8.5, width=6, units = "in", res = 300)
+layout(mat = matrix(1:6, nrow = 3))
+par(mar = c(3,2,2,2), oma = c(2,3,1,6))
 for(i in 1:6){
     cols <- ifelse(output[[i]]$upp < 0 | output[[i]]$low > 0, colmat[i,1], colmat[i,2])
-    if(i %in% c(1,3,5)) par(mar = c(3,3,2,1)) else par(mar = c(3,1,2,3))
+    if(i %in% 1:3) par(mar = c(3,3,2,1)) else par(mar = c(3,1,2,3))
         plot(y ~ coef, pch = 16, xlim = c(min(low),max(upp)+0.45), data = output[[i]], col = cols, 
          yaxt = "n", xlab = "", cex = 2)
-    if(i %in% c(1,3,5)) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else {
+    if(i %in% 1:3) axis(side = 2, at = output[[i]]$y, labels = rownames(output[[i]]), las = 1) else {
         axis(side = 4, at = c(2,5,7.5,9.5,12), las = 1, tick = F, 
              labels = c("Twig anatomical", "Leaf anatomical", "Stomatal", "Wood", "LES"))
         axis(side = 2, at = output[[i]]$y, labels = NA, las = 1)

@@ -1,4 +1,5 @@
 library(reshape2)
+library(stringr)
 
 CNR <- read.csv("./raw_data/CN ratio.csv", header=T, stringsAsFactors = T)
 Hmax <- read.csv("./raw_data/Hmax.csv", header=T, stringsAsFactors = T)
@@ -29,7 +30,7 @@ Varea_indiv <- aggregate(x = Varea_twig["VA"], by = list(Species=Varea_twig$Spec
 Varea_sp <- aggregate(x = Varea_indiv["VA"], by = list(Species=Varea_indiv$Species), FUN = mean, na.rm = T)
 
 ## DH
-DH <- function(x) sum((x^4)/length(x))^(1/4)
+DH <- function(x) (sum(x^4)/length(x))^(1/4)
 Varea$mean.diameter <- apply(Varea[c("Major.diameter","Minor.diameter")], 1, mean)
 DH_twig <- aggregate(x = Varea["mean.diameter"], 
                      by = list(Species=Varea$Species, Individual=Varea$Individual, Twig=Varea$Twig),
@@ -318,74 +319,74 @@ hist(indiv_traits$SD <- log(indiv_traits$SD))
 hist(indiv_traits$VGI <- log(indiv_traits$VGI))
 hist(indiv_traits$DH <- log(indiv_traits$DH))
 
-indiv_traits[,3:15] <- apply(indiv_traits[,3:15], 2, scale)
-
+indiv_traits[,3:14] <- apply(indiv_traits[,3:14], 2, scale)
+indiv_traits$Species <- substr(indiv_traits$Individual, 0, 3)
 modlist <- list()
 
-modlist[[1]] <- lme(sla ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[2]] <- lme(ldmc ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[3]] <- lme(thickness ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[4]] <- lme(Th_SM ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[5]] <- lme(L_VD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[6]] <- lme(SD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[7]] <- lme(GCL ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[8]] <- lme(WD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[9]] <- lme(T_VD ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[10]] <- lme(VGI ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
-modlist[[11]] <- lme(DH ~ Hydrology + dbh, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[1]] <- lme(sla ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[2]] <- lme(ldmc ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[3]] <- lme(thickness ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[4]] <- lme(Th_SM ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[5]] <- lme(L_VD ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[6]] <- lme(SD ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[7]] <- lme(GCL ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[8]] <- lme(WD ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[9]] <- lme(T_VD ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[10]] <- lme(VGI ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
+modlist[[11]] <- lme(DH ~ Hydrology, random = ~1|Species, data = indiv_traits, na.action = na.omit)
 
 plot(modlist[[1]])
+summary(modlist[[1]])$tTable
 
 hydro.coef <- data.frame(coef = rep(NA, length(modlist)), upp = NA, low = NA)
-dbh.coef <- data.frame(coef = rep(NA, length(modlist)), upp = NA, low = NA)
+#dbh.coef <- data.frame(coef = rep(NA, length(modlist)), upp = NA, low = NA)
 
 for(i in 1:length(modlist)){
     hydro.coef$coef[i] <- summary(modlist[[i]])$tTable[2, 1]
     hydro.coef$upp[i] <- summary(modlist[[i]])$tTable[2, 1] + 1.96*summary(modlist[[i]])$tTable[2, 2]
     hydro.coef$low[i] <- summary(modlist[[i]])$tTable[2, 1] - 1.96*summary(modlist[[i]])$tTable[2, 2]
-    dbh.coef$coef[i] <- summary(modlist[[i]])$tTable[3, 1]
-    dbh.coef$upp[i] <- summary(modlist[[i]])$tTable[3, 1] + 1.96*summary(modlist[[i]])$tTable[3, 2]
-    dbh.coef$low[i] <- summary(modlist[[i]])$tTable[3, 1] - 1.96*summary(modlist[[i]])$tTable[3, 2]
+    #dbh.coef$coef[i] <- summary(modlist[[i]])$tTable[3, 1]
+    #dbh.coef$upp[i] <- summary(modlist[[i]])$tTable[3, 1] + 1.96*summary(modlist[[i]])$tTable[3, 2]
+    #dbh.coef$low[i] <- summary(modlist[[i]])$tTable[3, 1] - 1.96*summary(modlist[[i]])$tTable[3, 2]
 }
 
 hydro.cols <- ifelse(hydro.coef$upp < 0 | hydro.coef$low > 0, "black", "grey")
-dbh.cols <- ifelse(dbh.coef$upp < 0 | dbh.coef$low > 0, "black", "grey")
+#dbh.cols <- ifelse(dbh.coef$upp < 0 | dbh.coef$low > 0, "black", "grey")
 
-#jpeg("./outputs/trait plasticity analysis.jpg", width = 4, height = 7, units = "in", res = 300)
+#jpeg("./outputs/trait plasticity analysis v2.jpg", width = 4, height = 7, units = "in", res = 300)
 par(mar = c(4,5,2,2))
-plot(seq(0.9, 10.9, 1) ~ hydro.coef$coef, pch = 16, xlim = c(-1,0.5), cex = 2, ylim = c(0.5, 12), col = hydro.cols,
+plot(seq(1, 11, 1) ~ hydro.coef$coef, pch = 16, xlim = c(-1,0.5), cex = 2, ylim = c(0.5, 12), col = hydro.cols,
      ylab = "", xlab = "Standardized effect size", yaxt = "n")
-points(seq(1.1, 11.1, 1) ~ dbh.coef$coef, pch = 17, cex = 2, ylim = c(0, 12), col = dbh.cols)
-
-for(i in 1:length(modlist)){
-    arrows(hydro.coef$upp[i], i-0.1, hydro.coef$low[i], i-0.1, length = 0, lwd = 2, col = hydro.cols[i])
-    arrows(dbh.coef$upp[i], i+0.1, dbh.coef$low[i], i+0.1, length = 0, lwd = 2, col = dbh.cols[i])
-}
+#points(seq(1.1, 11.1, 1) ~ dbh.coef$coef, pch = 17, cex = 2, ylim = c(0, 12), col = dbh.cols)
+for(i in 1:length(modlist)) arrows(hydro.coef$upp[i], i, hydro.coef$low[i], i, length = 0, lwd = 2, col = hydro.cols[i])
 abline(v = 0, lty = 2)
-axis(side = 2, at = 1:11, labels = c("SLA", "LDMC", "Th", "Th_SM", "L_VD", "SD", "GCL", "WD", "T_VD", "VGI", "DHI"), las = 1)
-legend('topleft', pch = c(16,17), legend = c("Waterlogging", "DBH"), bty = "n")
+axis(side = 2, at = 1:11, labels = c("SLA", "LDMC", "Th", "Th_SM", "L_VD", "SD", "GCL", "WD", "T_VD", "VGI", "DH"), las = 1)
+#legend('topleft', pch = c(16,17), legend = c("Waterlogging", "DBH"), bty = "n")
 dev.off()
 apply(!is.na(indiv_traits[,c(5,4,3,8,11,15,14,12,10,9,13)]), 2, sum)
 # just state: btwn 79 to 109 individuals
 
 library(MuMIn)
 
-Rval <- function(x) round(r.squaredGLMM(x)[1], 3)
+Rm <- function(x) round(r.squaredGLMM(x)[1], 3)
+Rc <- function(x) round(r.squaredGLMM(x)[2], 3)
 hydrop <- function(x) round(summary(x)$tTable[2,5], 3)
-dbhp <- function(x) round(summary(x)$tTable[3,5], 3)
+#dbhp <- function(x) round(summary(x)$tTable[3,5], 3)
 
 Tab <- data.frame(
     trait = c("SLA", "LDMC", "Th", "Th_SM", "L_VD", "SD", "GCL", "WD", "T_VD", "VGI", "DHI"),
     hydro.p = unlist(lapply(modlist, hydrop)),
-    dbh.p = unlist(lapply(modlist, dbhp)),
-    R2m = unlist(lapply(modlist, Rval))
+    #dbh.p = unlist(lapply(modlist, dbhp)),
+    R2m = unlist(lapply(modlist, Rm)),
+    R2c = unlist(lapply(modlist, Rc))
 )
 Tab$n <- apply(!is.na(indiv_traits[,c(5,4,3,8,11,15,14,12,10,9,13)]), 2, sum)    
 #write.csv(Tab, "./outputs/Table S2.csv")
 
-
-#
-
+unique(indiv_traits$Species)
+traits_sp$Species 
+`%ni%` <- Negate(`%in%`)
+traits_sp$Species[which(unique(traits_sp$Species) %ni% unique(indiv_traits$Species))]
 
 
 ## Defining pairs.cor() function
