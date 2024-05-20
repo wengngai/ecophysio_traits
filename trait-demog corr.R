@@ -342,7 +342,7 @@ newLVD <- seq(0.005, 0.012, 0.0001)
 LVDpred <- predict(LVD.BSR, newdata = data.frame(L_VD = newLVD), se.fit = T)
 
 #pdf("D:\\Dropbox\\Functional Traits Project\\Figures\\Fig 5 SSI coef and pred.pdf", height=4.5, width=9)
-#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Fig 5 SSI coef and pred.jpg", height=4.5, width=9, units = "in", res = 600)
+#jpeg("D:\\Dropbox\\Functional Traits Project\\Figures\\Fig 5 SSI coef and pred v2.jpg", height=4.5, width=9, units = "in", res = 600)
 par(mfrow = c(1,2), mar = c(4.5,4.5,1,7), mgp = c(3,1,0))
 
 cols <- ifelse(output[[8]]$upp < 0 | output[[8]]$low > 0, colmat[8,1], colmat[8,2])
@@ -367,9 +367,13 @@ plot(SSI ~ Th_SM, type="n", data = traits_sp, cex.lab = 1.5, xaxt = "n",
 axis(side = 1, at = logit(c(0.35, 0.45, 0.55, 0.65)), labels = c(35, 45, 55, 65))
 polygon(with(SMpred, inv.logit(c(fit + se.fit, rev(fit - se.fit)))) ~ c(newSM,rev(newSM)), border = F, col = "#66D7D16e")
 lines(inv.logit(SMpred$fit) ~ newSM, lwd = 4, col = "white")
-text(SSI ~ Th_SM, labels = Species, data = traits_sp,
-     cex = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), 1.2, 0.8),
-     col = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), "black", "grey60"))
+#text(SSI ~ Th_SM, labels = Species, data = traits_sp,
+#     cex = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), 1.2, 0.8),
+#     col = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), "black", "grey60"))
+text(SSI-0.05 ~ Th_SM, data = traits_sp, subset = traits_sp$Species %in% c("CSQ", "ACL"),
+     cex = 1.2, labels = c("ACL", "CSQ"))
+points(SSI ~ Th_SM, data = traits_sp, pch = 21, col = "white", lwd = 2,
+     cex = 2, bg = ifelse(traits_sp$Species %in% c("CSQ", "ACL"), "black", "#66D7D1"))
 mtext(side = 3, adj = 0, line = -1.5, text = " b)", cex = 1.5)
 
 dev.off()
